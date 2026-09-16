@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Контур обращений</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23153b63'/%3E%3Cpath d='M17 20h30v24H17z' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='m18 22 14 12 14-12' fill='none' stroke='white' stroke-width='4'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">ПочтаТех × хакатон</p>
+        <h1>Контур обращений</h1>
+      </div>
+      <div class="dataset-control">
+        <span id="dataset-status" class="status-pill">Данные не загружены</span>
+        <label class="upload-button">
+          Загрузить Excel
+          <input id="dataset-file" type="file" accept=".xlsx,.xls" />
+        </label>
+      </div>
+    </header>
+
+    <main class="shell">
+      <nav class="tabs" aria-label="Разделы приложения">
+        <button class="tab active" data-view="operator">Новое обращение</button>
+        <button class="tab" data-view="analytics">История и аналитика</button>
+      </nav>
+      <section id="notice" class="notice hidden" role="status"></section>
+
+      <section id="operator-view" class="view active">
+        <div class="split-layout">
+          <form id="appeal-form" class="panel form-panel">
+            <div class="panel-heading">
+              <p class="section-label">Рабочее место оператора</p>
+              <h2>Разобрать новое обращение</h2>
+              <p>Используются только сведения, известные при регистрации.</p>
+            </div>
+            <label>
+              Тема обращения
+              <input name="subject" required maxlength="500" placeholder="Кратко опишите проблему" />
+            </label>
+            <label>
+              Текст обращения
+              <textarea name="description" required maxlength="20000" rows="8" placeholder="Полный текст обращения"></textarea>
+            </label>
+            <div class="form-row">
+              <label>
+                Услуга
+                <input name="service" maxlength="500" placeholder="Если известна" />
+              </label>
+              <label>
+                Приоритет
+                <select name="priority">
+                  <option value="">Не указан</option>
+                  <option>Низкий</option>
+                  <option>Средний</option>
+                  <option>Высокий</option>
+                  <option>Критический</option>
+                </select>
+              </label>
+            </div>
+            <button class="primary" type="submit">Проанализировать</button>
+          </form>
+
+          <section class="panel result-panel" aria-live="polite">
+            <div class="panel-heading">
+              <p class="section-label">Результат</p>
+              <h2>Рекомендация сервису</h2>
+              <p id="result-placeholder">Заполните обращение, чтобы получить результат.</p>
+            </div>
+            <div id="manual-review" class="warning hidden">
+              Нужна ручная проверка: уверенность недостаточна или модель ещё не подключена.
+            </div>
+            <div id="result-grid" class="result-grid hidden">
+              <article class="result-card">
+                <span>Категория</span>
+                <strong id="category-value">—</strong>
+                <div class="confidence"><i id="category-confidence"></i></div>
+                <p id="category-explanation"></p>
+              </article>
+              <article class="result-card">
+                <span>Линия поддержки</span>
+                <strong id="line-value">—</strong>
+                <div class="confidence"><i id="line-confidence"></i></div>
+                <p id="line-explanation"></p>
+              </article>
+            </div>
+            <div id="similar-section" class="similar-section hidden">
+              <h3>Похожие обращения</h3>
+              <div id="similar-list" class="similar-list"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="analytics-view" class="view">
+        <div class="kpi-grid">
+          <article class="kpi"><span>Обращения</span><strong id="kpi-total">0</strong></article>
+          <article class="kpi"><span>Доля просроченных</span><strong id="kpi-overdue">—</strong></article>
+          <article class="kpi"><span>Статус аналитики</span><strong id="kpi-status">Нет данных</strong></article>
+        </div>
+        <section class="panel records-panel">
+          <div class="records-heading">
+            <div>
+              <p class="section-label">Исходные данные</p>
+              <h2>История обращений</h2>
+            </div>
+            <input id="record-search" type="search" placeholder="Поиск по загруженным строкам" />
+          </div>
+          <div id="table-wrap" class="table-wrap">
+            <div class="empty-state">Загрузите Excel, чтобы увидеть историю.</div>
+          </div>
+          <div class="pagination">
+            <button id="prev-page" class="secondary" disabled>Назад</button>
+            <span id="page-label">0 записей</span>
+            <button id="next-page" class="secondary" disabled>Далее</button>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="record-dialog">
+      <div class="dialog-heading">
+        <h2>Исходная запись</h2>
+        <button id="close-dialog" aria-label="Закрыть">×</button>
+      </div>
+      <dl id="record-details"></dl>
+    </dialog>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

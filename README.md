@@ -1,93 +1,96 @@
-# template-gitlab-0f73d428
+# Мониторинг и категоризация обращений
 
-Template for task: GitLab репозиторий
+Общее приложение команды для обработки нового обращения и аналитики исторических данных. Текущая ветка содержит каркас участника 4: backend, frontend, импорт Excel и контракты интеграции модулей участников 1–3.
 
-## Getting started
+## Что уже работает
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- загрузка `.xlsx` и `.xls` до 25 МБ;
+- автоматический выбор самого большого непустого листа;
+- сохранение исходных строк в SQLite с устойчивым `_record_id`;
+- просмотр, поиск и открытие исходной записи;
+- форма нового обращения;
+- API-контракты категории, уверенности, объяснения, маршрута и похожих обращений;
+- явное предупреждение о ручной проверке, пока ML-модули не подключены;
+- базовая сводка по числу загруженных обращений;
+- интерактивная документация API по адресу `/docs`.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Каркас не выдаёт вымышленные ML-результаты. До интеграции моделей участника 1 и участника 2 категория и линия возвращаются с нулевой уверенностью и признаком ручной проверки. SLA-метрики ожидают модуль участника 3.
 
-## Add your files
+## Запуск
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+Требуется Python 3.11 или новее.
 
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e '.[dev]'
+uvicorn app.main:app --reload
 ```
-cd existing_repo
-git remote add origin https://git.codenrock.com/codenrock/khakaton-postcode-challenge-ot-pochtatekha/template-gitlab-0f73d428.git
-git branch -M main
-git push -uf origin main
+
+Откройте [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+## Тесты
+
+```bash
+pytest
 ```
 
-## Integrate with your tools
+## API интеграции
 
-- [ ] [Set up project integrations](https://git.codenrock.com/codenrock/khakaton-postcode-challenge-ot-pochtatekha/template-gitlab-0f73d428/-/settings/integrations)
+### Категоризация и общий результат
 
-## Collaborate with your team
+`POST /api/appeals/analyze`
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+Вход содержит только регистрационные сведения:
 
-## Test and Deploy
+```json
+{
+  "subject": "Не приходит письмо",
+  "description": "Письмо зависло в очереди и не доставляется адресату",
+  "service": "Корпоративная почта",
+  "priority": "Высокий"
+}
+```
 
-Use the built-in continuous integration in GitLab.
+Ответ стабилен для frontend и включает:
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+- `category.category`, `confidence`, `explanation`, `needs_manual_review`;
+- `routing.support_line`, `confidence`, `explanation`;
+- `similar_appeals[]` с `record_id`, близостью, категорией, линией и результатом;
+- общий `manual_review_required`.
 
-***
+Интерфейсы адаптеров находятся в `app/services/integrations.py`. Реализации участников 1 и 2 нужно передать в `AnalysisService`, не меняя API и frontend.
 
-# Editing this README
+### Данные и аналитика
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+- `POST /api/datasets` — загрузить Excel;
+- `GET /api/datasets/current` — получить текущий датасет;
+- `GET /api/datasets/{dataset_id}/records` — получить страницу исходных строк;
+- `GET /api/records/{record_id}` — открыть исходную запись;
+- `GET /api/analytics/overview` — сводка и точка интеграции аналитики участника 3;
+- `GET /api/integrations` — статус командных модулей.
 
-## Suggestions for a good README
+## Структура
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```text
+app/
+  main.py                    FastAPI и HTTP-маршруты
+  models.py                  общие схемы данных
+  services/
+    dataset_store.py         Excel, SQLite и исходные записи
+    integrations.py          контракты модулей участников 1–3
+  static/
+    index.html               интерфейс оператора и аналитики
+    app.js                   взаимодействие с API
+    styles.css               адаптивное оформление
+tests/
+  test_app.py                проверки API и импорта Excel
+```
 
-## Name
-Choose a self-explaining name for your project.
+## Правила разработки
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- Не использовать итоговое решение, фактическую линию и фактические сроки как признаки нового обращения.
+- Не отправлять изменения напрямую в `main`.
+- Работать в ветках `feature/*` и выполнять слияние через Merge Request.
+- Не коммитить исходный Excel, SQLite и содержимое `data/runtime/`.
