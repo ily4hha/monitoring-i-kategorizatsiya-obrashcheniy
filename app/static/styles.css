@@ -40,7 +40,8 @@ button { cursor: pointer; }
 .status-pill { padding: 8px 12px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; color: #dceaf6; font-size: 13px; }
 .upload-button, .primary, .secondary { display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 10px; font-weight: 700; }
 .upload-button { padding: 11px 16px; color: var(--navy); background: white; }
-.upload-button input { display: none; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+#dataset-file:focus-visible + .upload-button { outline: 3px solid white; outline-offset: 3px; }
 
 .shell { max-width: 1320px; margin: 0 auto; padding: 26px 28px 60px; }
 .tabs { display: flex; gap: 6px; margin-bottom: 22px; }
@@ -114,4 +115,3 @@ dialog::backdrop { background: rgba(15,23,42,.56); }
   .records-heading { align-items: stretch; flex-direction: column; }
   .records-heading input { max-width: none; }
 }
-

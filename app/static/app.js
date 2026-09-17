@@ -1,4 +1,5 @@
-const state = { dataset: null, offset: 0, limit: 20, total: 0, query: "" };
+const state = { dataset: null, offset: 0, limit: 20, total: 0, query: "", recordsRequest: 0, recordsAbort: null, recordsLoading: false };
+const reservedColumns = new Set(["_record_id", "_sheet", "_source_row"]);
 const $ = (selector) => document.querySelector(selector);
 
 function showNotice(message, type = "info") {
@@ -13,10 +14,17 @@ async function api(path, options = {}) {
   const response = await fetch(path, options);
   if (!response.ok) {
     let message = `Ошибка ${response.status}`;
-    try { message = (await response.json()).detail || message; } catch (_) {}
+    try { message = formatApiDetail((await response.json()).detail) || message; } catch (_) {}
     throw new Error(message);
   }
   return response.json();
+}
+
+function formatApiDetail(detail) {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item?.msg || item?.message || JSON.stringify(item)).join("; ");
+  if (detail && typeof detail === "object") return detail.msg || detail.message || JSON.stringify(detail);
+  return "";
 }
 
 function setActiveView(name) {
@@ -61,6 +69,7 @@ async function submitAppeal(event) {
   payload.priority ||= null;
   button.disabled = true;
   button.textContent = "Анализируем…";
+  resetAnalysis("Анализируем обращение…");
   try {
     const result = await api("/api/appeals/analyze", {
       method: "POST",
@@ -69,11 +78,20 @@ async function submitAppeal(event) {
     });
     renderAnalysis(result);
   } catch (error) {
+    resetAnalysis(`Не удалось выполнить анализ: ${error.message}`);
     showNotice(error.message, "error");
   } finally {
     button.disabled = false;
     button.textContent = "Проанализировать";
   }
+}
+
+function resetAnalysis(message) {
+  $("#result-grid").classList.add("hidden");
+  $("#similar-section").classList.add("hidden");
+  $("#manual-review").classList.add("hidden");
+  $("#result-placeholder").textContent = message;
+  $("#result-placeholder").classList.remove("hidden");
 }
 
 function renderAnalysis(result) {
@@ -92,13 +110,18 @@ function renderAnalysis(result) {
   list.replaceChildren();
   section.classList.remove("hidden");
   if (!result.similar_appeals.length) {
-    list.innerHTML = '<div class="empty-state">Модуль поиска похожих обращений пока не подключён.</div>';
+    list.innerHTML = '<div class="empty-state">Совпадений не найдено.</div>';
     return;
   }
   result.similar_appeals.forEach((item) => {
     const card = document.createElement("article");
     card.className = "similar-item";
-    card.innerHTML = `<strong>${escapeHtml(item.category || "Без категории")}</strong><p>${escapeHtml(item.resolution || "Результат не указан")}</p>`;
+    card.innerHTML = `<strong>${escapeHtml(item.category || "Без категории")}</strong><p>${escapeHtml(item.resolution || "Решение не указано")}</p><p>Близость: ${Math.round(item.score * 100)}% · Линия: ${escapeHtml(item.support_line || "не указана")}</p>`;
+    const open = document.createElement("button");
+    open.className = "secondary";
+    open.textContent = "Открыть исходную запись";
+    open.addEventListener("click", () => openRecord(item.record_id));
+    card.append(open);
     list.append(card);
   });
 }
@@ -111,21 +134,42 @@ async function loadAnalytics() {
 }
 
 async function loadRecords() {
+  clearTimeout(state.searchTimer);
   if (!state.dataset) return renderEmptyTable("Загрузите Excel, чтобы увидеть историю.");
+  state.recordsAbort?.abort();
+  const controller = new AbortController();
+  state.recordsAbort = controller;
+  const requestId = ++state.recordsRequest;
+  state.recordsLoading = true;
+  renderPagination();
+  const expected = { datasetId: state.dataset.dataset_id, query: state.query, offset: state.offset };
   const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
   if (state.query) params.set("q", state.query);
   try {
-    const page = await api(`/api/datasets/${state.dataset.dataset_id}/records?${params}`);
+    const page = await api(`/api/datasets/${state.dataset.dataset_id}/records?${params}`, { signal: controller.signal });
+    if (requestId !== state.recordsRequest || !state.dataset || state.dataset.dataset_id !== expected.datasetId || state.query !== expected.query || state.offset !== expected.offset) return;
     state.total = page.total;
+    const lastOffset = Math.max(0, Math.floor((page.total - 1) / state.limit) * state.limit);
+    if (state.offset > lastOffset) {
+      state.offset = lastOffset;
+      return loadRecords();
+    }
     renderRecords(page.items);
-    renderPagination();
   } catch (error) {
-    renderEmptyTable(error.message);
+    if (error.name === "AbortError") return;
+    if (requestId === state.recordsRequest) renderEmptyTable(error.message);
+  } finally {
+    if (requestId === state.recordsRequest) {
+      state.recordsLoading = false;
+      renderPagination();
+    }
   }
 }
 
 function renderRecords(items) {
-  if (!items.length) return renderEmptyTable("По вашему запросу ничего не найдено.");
+  if (!items.length) {
+    return renderEmptyTable("По вашему запросу ничего не найдено.");
+  }
   const columns = state.dataset.columns.slice(0, 6);
   const table = document.createElement("table");
   table.innerHTML = `<thead><tr><th>Запись</th>${columns.map((name) => `<th>${escapeHtml(name)}</th>`).join("")}</tr></thead>`;
@@ -143,16 +187,24 @@ function renderRecords(items) {
 
 function renderEmptyTable(message) {
   $("#table-wrap").innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
-  state.total = 0;
   renderPagination();
 }
 
 function renderPagination() {
   const start = state.total ? state.offset + 1 : 0;
   const end = Math.min(state.offset + state.limit, state.total);
-  $("#page-label").textContent = `${start}–${end} из ${state.total}`;
-  $("#prev-page").disabled = state.offset === 0;
-  $("#next-page").disabled = state.offset + state.limit >= state.total;
+  $("#page-label").textContent = state.recordsLoading ? "Загрузка…" : `${start}–${end} из ${state.total}`;
+  $("#prev-page").disabled = state.recordsLoading || state.offset === 0;
+  $("#next-page").disabled = state.recordsLoading || state.offset + state.limit >= state.total;
+}
+
+function changePage(direction) {
+  if (state.recordsLoading || !state.dataset) return;
+  const lastOffset = Math.max(0, Math.floor((state.total - 1) / state.limit) * state.limit);
+  const offset = Math.max(0, Math.min(lastOffset, state.offset + direction * state.limit));
+  if (offset === state.offset) return;
+  state.offset = offset;
+  loadRecords();
 }
 
 async function openRecord(id) {
@@ -160,7 +212,7 @@ async function openRecord(id) {
     const item = await api(`/api/records/${id}`);
     const details = $("#record-details");
     details.replaceChildren();
-    Object.entries(item).filter(([key]) => !key.startsWith("_")).forEach(([key, value]) => {
+    Object.entries(item).filter(([key]) => !reservedColumns.has(key)).forEach(([key, value]) => {
       const term = document.createElement("dt");
       term.textContent = key;
       const description = document.createElement("dd");
@@ -185,12 +237,17 @@ function escapeHtml(value) {
 document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => setActiveView(tab.dataset.view)));
 $("#dataset-file").addEventListener("change", (event) => event.target.files[0] && uploadDataset(event.target.files[0]));
 $("#appeal-form").addEventListener("submit", submitAppeal);
-$("#prev-page").addEventListener("click", () => { state.offset = Math.max(0, state.offset - state.limit); loadRecords(); });
-$("#next-page").addEventListener("click", () => { state.offset += state.limit; loadRecords(); });
+$("#prev-page").addEventListener("click", () => changePage(-1));
+$("#next-page").addEventListener("click", () => changePage(1));
 $("#record-search").addEventListener("input", (event) => {
+  state.recordsAbort?.abort();
+  state.recordsRequest++;
   clearTimeout(state.searchTimer);
-  state.searchTimer = setTimeout(() => { state.query = event.target.value.trim(); state.offset = 0; loadRecords(); }, 300);
+  state.query = event.target.value.trim();
+  state.offset = 0;
+  state.recordsLoading = Boolean(state.dataset);
+  renderEmptyTable(state.dataset ? "Поиск…" : "Загрузите Excel, чтобы увидеть историю.");
+  state.searchTimer = setTimeout(() => loadRecords(), 300);
 });
 $("#close-dialog").addEventListener("click", () => $("#record-dialog").close());
 loadCurrentDataset().catch((error) => showNotice(error.message, "error"));
-

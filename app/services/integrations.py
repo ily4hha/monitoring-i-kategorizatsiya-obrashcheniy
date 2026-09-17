@@ -70,6 +70,7 @@ class AnalysisService:
             similar_appeals=similar,
             manual_review_required=(
                 category.needs_manual_review
+                or category.confidence < 0.5
                 or routing.confidence < 0.5
                 or routing.support_line is None
             ),
@@ -83,4 +84,3 @@ class AnalysisService:
             similarity="pending",
             analytics="dataset-preview-ready",
         )
-

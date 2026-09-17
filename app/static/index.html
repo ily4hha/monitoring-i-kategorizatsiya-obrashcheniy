@@ -15,9 +15,9 @@
       </div>
       <div class="dataset-control">
         <span id="dataset-status" class="status-pill">Данные не загружены</span>
-        <label class="upload-button">
+        <input id="dataset-file" class="visually-hidden" type="file" accept=".xlsx,.xls" aria-label="Выберите Excel-файл для загрузки" />
+        <label class="upload-button" for="dataset-file">
           Загрузить Excel
-          <input id="dataset-file" type="file" accept=".xlsx,.xls" />
         </label>
       </div>
     </header>
@@ -107,7 +107,7 @@
               <p class="section-label">Исходные данные</p>
               <h2>История обращений</h2>
             </div>
-            <input id="record-search" type="search" placeholder="Поиск по загруженным строкам" />
+            <input id="record-search" type="search" maxlength="500" placeholder="Поиск по загруженным строкам" aria-label="Поиск по загруженным строкам" />
           </div>
           <div id="table-wrap" class="table-wrap">
             <div class="empty-state">Загрузите Excel, чтобы увидеть историю.</div>

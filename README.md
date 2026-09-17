@@ -25,7 +25,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e '.[dev]'
-uvicorn app.main:app --reload
+uvicorn app.main:create_app --factory --reload
 ```
 
 Откройте [http://127.0.0.1:8000](http://127.0.0.1:8000).
