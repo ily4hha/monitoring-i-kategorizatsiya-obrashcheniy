@@ -33,3 +33,14 @@ def test_file_input_focus_selector_targets_its_visible_label():
     assert next_tag == "label" and label.get("for") == "dataset-file" and label.get("class") == "upload-button"
     css = (ROOT / "app/static/styles.css").read_text()
     assert '#dataset-file:focus-visible + .upload-button { outline: 3px solid white; outline-offset: 3px; }' in css
+
+
+def test_integrated_result_and_sla_elements_are_present():
+    html = (ROOT / "app/static/index.html").read_text()
+    for element_id in (
+        "classification-status", "category-confidence-label", "category-limitation",
+        "category-review", "line-confidence-label", "line-review", "kpi-mean-sla",
+        "kpi-median-sla", "analytics-message", "category-distribution", "line-distribution",
+    ):
+        assert f'id="{element_id}"' in html
+    assert 'name="component"' in html

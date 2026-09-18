@@ -160,3 +160,54 @@ test('a failed analysis hides previous results and similar cards', async () => {
   assert.match(h.el('#result-placeholder').textContent, /Unavailable/);
   assert.equal(button.disabled, false);
 });
+
+test('analysis renders honest categorization fallback, confidence, route, and manual review', async () => {
+  const h = await harness();
+  h.run(`renderClassificationStatus("model-missing"); renderAnalysis({
+    category: {category: null, confidence: 0, explanation: "Модель отсутствует.", limitation: "Категоризация недоступна: model-missing", needs_manual_review: true},
+    routing: {support_line: "2 линия", confidence: .82, explanation: "Похожий профиль обращения.", needs_manual_review: false},
+    similar_appeals: [{record_id: "model-17", score: .74, category: "Почта", support_line: "2 линия", resolution: "Проверить очередь"}],
+    manual_review_required: true
+  })`);
+  assert.equal(h.el('#classification-status').textContent, 'Статус модели: отсутствует');
+  assert.equal(h.el('#category-value').textContent, 'Не определена');
+  assert.equal(h.el('#category-confidence-label').textContent, 'Уверенность: 0%');
+  assert.equal(h.el('#category-limitation').classList.contains('hidden'), false);
+  assert.equal(h.el('#category-review').classList.contains('hidden'), false);
+  assert.equal(h.el('#line-value').textContent, '2 линия');
+  assert.equal(h.el('#line-confidence-label').textContent, 'Уверенность: 82%');
+  assert.equal(h.el('#manual-review').classList.contains('hidden'), false);
+  assert.equal(h.el('#similar-list').children.length, 1);
+  assert.match(h.el('#similar-list').children[0].innerHTML, /ID в индексе модели: model-17/);
+  assert.doesNotMatch(h.el('#similar-list').children[0].innerHTML, /Открыть исходную запись/);
+});
+
+test('SLA analytics renders metrics, distributions, empty, loading, and error states', async () => {
+  const h = await harness();
+  h.run(`renderAnalytics({
+    status: "ready", total_appeals: 4, overdue_count: 2, overdue_share: .5,
+    mean_sla_h: 4.25, median_sla_h: 3,
+    category_distribution: [{value: "Категория A", count: 3, share: .75}],
+    line_distribution: [{value: "2 линия", count: 2, share: .5}],
+    message: "Расчёт готов."
+  })`);
+  assert.equal(h.el('#kpi-total').textContent, '4');
+  assert.equal(h.el('#kpi-overdue').textContent, '2 · 50%');
+  assert.match(h.el('#kpi-mean-sla').textContent, /^4[,.]3 ч$/);
+  assert.equal(h.el('#kpi-median-sla').textContent, '3 ч');
+  assert.match(h.el('#category-distribution').innerHTML, /Категория A/);
+  assert.match(h.el('#line-distribution').innerHTML, /2 линия/);
+
+  h.run('setAnalyticsLoading()');
+  assert.equal(h.el('#kpi-status').textContent, 'Загрузка…');
+  assert.match(h.el('#category-distribution').innerHTML, /Загрузка/);
+
+  h.run('renderAnalytics({status: "no-data", total_appeals: 0, overdue_share: null, message: "Загрузите Excel."})');
+  assert.equal(h.el('#kpi-status').textContent, 'Нет данных');
+  assert.match(h.el('#category-distribution').innerHTML, /Загрузите данные/);
+
+  h.run('renderAnalyticsError("Server unavailable")');
+  assert.equal(h.el('#kpi-status').textContent, 'Ошибка');
+  assert.match(h.el('#analytics-message').textContent, /Server unavailable/);
+  assert.match(h.el('#category-distribution').innerHTML, /error-state/);
+});
