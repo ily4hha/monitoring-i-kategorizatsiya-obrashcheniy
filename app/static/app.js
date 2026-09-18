@@ -78,6 +78,7 @@ function renderIntegrationStatus(selector, kind, status) {
   const labels = {
     classification: {
       ready: "Статус модели: готова", "model-missing": "Статус модели: отсутствует",
+      "metadata-missing": "Статус модели: нет метаданных",
       uninitialized: "Статус модели: ожидает проверки", pending: "Статус модели: ожидает запуска",
       "model-incompatible": "Статус модели: несовместима", "embedder-unavailable": "Статус модели: нет локальных весов",
       "inference-error": "Статус модели: ошибка вычислений", "status-error": "Статус модели: недоступен",

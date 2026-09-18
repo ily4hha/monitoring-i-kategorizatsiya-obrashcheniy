@@ -38,6 +38,7 @@ def loaded_mock(tmp_path, monkeypatch):
     path = tmp_path / "model.pkl"
     path.touch()
     bundle = mock_bundle()
+    path.with_suffix(".json").write_text(json.dumps({key: value for key, value in bundle.items() if key != "model"}))
     load = Mock(return_value=bundle)
     monkeypatch.setattr(joblib, "load", load)
     monkeypatch.setattr(service, "package_versions", lambda: {"test": "1"})
@@ -109,6 +110,39 @@ def test_uncertain_or_other_prediction_is_manual(loaded_mock, proba, threshold):
     result = ClassifierAdapter(categorizer).predict(AppealInput(**APPEAL))
     assert result.category is None and result.needs_manual_review
     assert result.confidence == max(proba)
+
+
+def test_plain_other_category_is_manual(loaded_mock):
+    categorizer, bundle, *_ = loaded_mock
+    bundle["model"].classes_ = np.array(["Личный кабинет", "Прочее"])
+    bundle["classes"] = bundle["model"].classes_.tolist()
+    categorizer.metadata_path.write_text(json.dumps({key: value for key, value in bundle.items() if key != "model"}))
+    bundle["model"].predict_proba.return_value = np.array([[0.1, 0.9]])
+
+    result = ClassifierAdapter(categorizer).predict(AppealInput(**APPEAL))
+
+    assert result.category is None
+    assert result.confidence == 0.9
+    assert result.needs_manual_review is True
+
+
+def test_missing_or_mismatched_external_metadata_never_becomes_ready(loaded_mock):
+    categorizer, _, load, factory, _ = loaded_mock
+    categorizer.metadata_path.unlink()
+    categorizer = service.TicketCategorizer(categorizer.model_path)
+    assert categorizer.status == "metadata-missing"
+    adapter = ClassifierAdapter(categorizer)
+    with TestClient(create_app(categorizer.model_path.parent / "runtime", analysis=AnalysisService(classifier=adapter))) as client:
+        assert client.get("/api/integrations").json()["classification"] == "metadata-missing"
+    assert categorizer.predict("text")["category"] is None
+    load.assert_not_called()
+    factory.assert_not_called()
+
+    categorizer.metadata_path.write_text("{}")
+    categorizer = service.TicketCategorizer(categorizer.model_path)
+    assert categorizer.predict("text")["category"] is None
+    assert categorizer.status == "model-incompatible"
+    factory.assert_not_called()
 
 
 @pytest.mark.parametrize("field,value", [
