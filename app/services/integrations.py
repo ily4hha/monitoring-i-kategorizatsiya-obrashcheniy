@@ -71,16 +71,16 @@ class AnalysisService:
             manual_review_required=(
                 category.needs_manual_review
                 or category.confidence < 0.5
+                or routing.needs_manual_review
                 or routing.confidence < 0.5
                 or routing.support_line is None
             ),
         )
 
-    @staticmethod
-    def status() -> IntegrationStatus:
+    def status(self) -> IntegrationStatus:
         return IntegrationStatus(
             classification="pending",
-            routing="pending",
-            similarity="pending",
+            routing=getattr(self.router, "status", "pending"),
+            similarity=getattr(self.similarity, "status", "pending"),
             analytics="dataset-preview-ready",
         )

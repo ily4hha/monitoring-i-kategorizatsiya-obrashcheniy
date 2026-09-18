@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, File, HTTPException, Query, UploadFile
@@ -9,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.models import AppealAnalysis, AppealInput, DatasetSummary, IntegrationStatus, RecordPage
 from app.services.dataset_store import DatasetError, DatasetStore
 from app.services.integrations import AnalysisService
+from app.services.routing import RoutingAdapter, RoutingRuntime, SimilaritySearchAdapter
 from app.uploads import LimitedUploadRoute
 
 
@@ -20,14 +22,25 @@ MAX_OFFSET = 100_000
 
 def create_app(runtime_dir: Path = RUNTIME_DIR, *, analysis: AnalysisService | None = None) -> FastAPI:
     """Create runtime resources only when explicitly called (Uvicorn --factory)."""
+    runtime = RoutingRuntime()
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        if analysis is None:
+            runtime.start()
+        yield
+
     application = FastAPI(
+        lifespan=lifespan,
         title="Мониторинг и категоризация обращений",
         version="0.1.0",
         description="API общего приложения команды хакатона.",
     )
     application.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     application.state.dataset_store = DatasetStore(runtime_dir)
-    application.state.analysis_service = analysis or AnalysisService()
+    application.state.analysis_service = analysis if analysis is not None else AnalysisService(
+        router=RoutingAdapter(runtime), similarity=SimilaritySearchAdapter(runtime),
+    )
     uploads = APIRouter(route_class=LimitedUploadRoute)
 
     @application.get("/", include_in_schema=False)

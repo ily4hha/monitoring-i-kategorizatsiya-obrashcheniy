@@ -156,7 +156,7 @@ def test_analysis_adapter_error_returns_service_unavailable(tmp_path) -> None:
 
         @staticmethod
         def status():
-            return AnalysisService.status()
+            return AnalysisService().status()
 
     with TestClient(create_app(tmp_path / "runtime", analysis=BrokenAnalysis())) as client:
         response = client.post(

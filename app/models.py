@@ -21,6 +21,7 @@ class CategoryPrediction(BaseModel):
 
 
 class RoutingPrediction(BaseModel):
+    needs_manual_review: bool = False
     support_line: str | None
     confidence: float = Field(ge=0, le=1)
     explanation: str
