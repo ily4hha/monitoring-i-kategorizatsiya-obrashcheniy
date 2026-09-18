@@ -92,6 +92,7 @@
               </article>
               <article class="result-card">
                 <span>Линия поддержки</span>
+                <span id="routing-status" class="model-status loading">Маршрутизация: проверяем…</span>
                 <strong id="line-value">—</strong>
                 <div class="confidence" aria-hidden="true"><i id="line-confidence"></i></div>
                 <p id="line-confidence-label" class="confidence-label">Уверенность: —</p>
@@ -100,7 +101,10 @@
               </article>
             </div>
             <div id="similar-section" class="similar-section hidden">
-              <h3>Похожие обращения</h3>
+              <div class="similar-heading">
+                <h3>Похожие обращения</h3>
+                <span id="similarity-status" class="model-status loading">Поиск: проверяем…</span>
+              </div>
               <div id="similar-list" class="similar-list"></div>
             </div>
           </section>

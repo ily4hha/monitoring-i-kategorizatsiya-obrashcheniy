@@ -148,6 +148,18 @@ test('structured API errors are rendered as readable text', async () => {
   }
 });
 
+test('current dataset loading failure renders analytics and records error states', async () => {
+  const h = await harness();
+  const pending = h.run('loadCurrentDataset()');
+  h.requests[0].reject(new Error('Connection lost'));
+  await pending;
+  assert.equal(h.el('#kpi-status').textContent, 'Ошибка');
+  assert.match(h.el('#analytics-message').textContent, /Connection lost/);
+  assert.match(h.el('#table-wrap').innerHTML, /Не удалось загрузить текущий набор данных/);
+  assert.match(h.el('#table-wrap').innerHTML, /error-state/);
+  assert.equal(h.el('#page-label').textContent, '0–0 из 0');
+});
+
 test('a failed analysis hides previous results and similar cards', async () => {
   const h = await harness();
   h.run('renderAnalysis({category: {category: "A", confidence: .9, explanation: "A"}, routing: {support_line: "L1", confidence: .9, explanation: "L1"}, similar_appeals: [], manual_review_required: true})');
@@ -163,7 +175,8 @@ test('a failed analysis hides previous results and similar cards', async () => {
 
 test('analysis renders honest categorization fallback, confidence, route, and manual review', async () => {
   const h = await harness();
-  h.run(`renderClassificationStatus("model-missing"); renderAnalysis({
+  h.run(`state.integrations = {classification: "model-missing", routing: "ready", similarity: "ready", analytics: "ready"};
+    renderIntegrationStatuses(); renderAnalysis({
     category: {category: null, confidence: 0, explanation: "Модель отсутствует.", limitation: "Категоризация недоступна: model-missing", needs_manual_review: true},
     routing: {support_line: "2 линия", confidence: .82, explanation: "Похожий профиль обращения.", needs_manual_review: false},
     similar_appeals: [{record_id: "model-17", score: .74, category: "Почта", support_line: "2 линия", resolution: "Проверить очередь"}],
@@ -174,12 +187,63 @@ test('analysis renders honest categorization fallback, confidence, route, and ma
   assert.equal(h.el('#category-confidence-label').textContent, 'Уверенность: 0%');
   assert.equal(h.el('#category-limitation').classList.contains('hidden'), false);
   assert.equal(h.el('#category-review').classList.contains('hidden'), false);
+  assert.equal(h.el('#routing-status').textContent, 'Маршрутизация: готова');
   assert.equal(h.el('#line-value').textContent, '2 линия');
   assert.equal(h.el('#line-confidence-label').textContent, 'Уверенность: 82%');
   assert.equal(h.el('#manual-review').classList.contains('hidden'), false);
+  assert.equal(h.el('#similarity-status').textContent, 'Поиск: доступен');
   assert.equal(h.el('#similar-list').children.length, 1);
   assert.match(h.el('#similar-list').children[0].innerHTML, /ID в индексе модели: model-17/);
   assert.doesNotMatch(h.el('#similar-list').children[0].innerHTML, /Открыть исходную запись/);
+});
+
+test('analysis refreshes lazy integration statuses before showing the result', async () => {
+  const h = await harness();
+  const button = new Element();
+  h.context.event = { preventDefault() {}, currentTarget: { querySelector: () => button } };
+  const pending = h.run('submitAppeal(event)');
+  h.reply(0, {
+    category: { category: null, confidence: 0, explanation: 'Модель отсутствует.', limitation: 'model-missing', needs_manual_review: true },
+    routing: { support_line: '3 линия', confidence: .76, explanation: 'Маршрут найден.', needs_manual_review: false },
+    similar_appeals: [], manual_review_required: true,
+  });
+  await flush();
+  assert.equal(h.requests.length, 2);
+  assert.equal(h.requests[1].url, '/api/integrations');
+  h.reply(1, { classification: 'model-missing', routing: 'ready', similarity: 'unavailable:inference-error', analytics: 'ready' });
+  await pending;
+  assert.equal(h.el('#classification-status').textContent, 'Статус модели: отсутствует');
+  assert.equal(h.el('#routing-status').textContent, 'Маршрутизация: готова');
+  assert.equal(h.el('#similarity-status').textContent, 'Поиск: ошибка вычислений');
+  assert.match(h.el('#similar-list').innerHTML, /Поиск похожих обращений недоступен/);
+  assert.match(h.el('#similar-list').innerHTML, /error-state/);
+  assert.equal(button.disabled, false);
+});
+
+test('a late integration response cannot overwrite a newer post-analysis status', async () => {
+  const h = await harness();
+  const old = h.run('loadIntegrations()');
+  const current = h.run('loadIntegrations()');
+  h.reply(1, { classification: 'model-missing', routing: 'ready', similarity: 'ready', analytics: 'ready' });
+  await current;
+  h.reply(0, { classification: 'uninitialized', routing: 'pending', similarity: 'pending', analytics: 'ready' });
+  await old;
+  assert.equal(h.el('#classification-status').textContent, 'Статус модели: отсутствует');
+  assert.equal(h.el('#routing-status').textContent, 'Маршрутизация: готова');
+  assert.equal(h.el('#similarity-status').textContent, 'Поиск: доступен');
+});
+
+test('ready similarity search distinguishes a real empty result from an unavailable search', async () => {
+  const h = await harness();
+  h.run(`state.integrations = {classification: "ready", routing: "ready", similarity: "ready", analytics: "ready"};
+    renderIntegrationStatuses(); renderAnalysis({
+      category: {category: "A", confidence: .91, explanation: "Категория найдена.", needs_manual_review: false},
+      routing: {support_line: "1 линия", confidence: .88, explanation: "Маршрут найден.", needs_manual_review: false},
+      similar_appeals: [], manual_review_required: false
+    })`);
+  assert.match(h.el('#similar-list').innerHTML, /Совпадений не найдено/);
+  assert.doesNotMatch(h.el('#similar-list').innerHTML, /error-state/);
+  assert.equal(h.el('#manual-review').classList.contains('hidden'), true);
 });
 
 test('SLA analytics renders metrics, distributions, empty, loading, and error states', async () => {
@@ -200,6 +264,8 @@ test('SLA analytics renders metrics, distributions, empty, loading, and error st
 
   h.run('setAnalyticsLoading()');
   assert.equal(h.el('#kpi-status').textContent, 'Загрузка…');
+  assert.equal(h.el('#kpi-total').textContent, '—');
+  assert.equal(h.el('#kpi-overdue').textContent, '—');
   assert.match(h.el('#category-distribution').innerHTML, /Загрузка/);
 
   h.run('renderAnalytics({status: "no-data", total_appeals: 0, overdue_share: null, message: "Загрузите Excel."})');

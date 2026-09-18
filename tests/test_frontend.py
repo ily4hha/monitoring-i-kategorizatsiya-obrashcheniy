@@ -39,7 +39,8 @@ def test_integrated_result_and_sla_elements_are_present():
     html = (ROOT / "app/static/index.html").read_text()
     for element_id in (
         "classification-status", "category-confidence-label", "category-limitation",
-        "category-review", "line-confidence-label", "line-review", "kpi-mean-sla",
+        "category-review", "routing-status", "line-confidence-label", "line-review",
+        "similarity-status", "kpi-mean-sla",
         "kpi-median-sla", "analytics-message", "category-distribution", "line-distribution",
     ):
         assert f'id="{element_id}"' in html

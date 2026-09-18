@@ -85,6 +85,11 @@ textarea { resize: vertical; }
 .confidence { height: 7px; overflow: hidden; border-radius: 999px; background: #e7eaf0; }
 .confidence i { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--blue); transition: width .3s ease; }
 .similar-section { margin-top: 24px; }
+.similar-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.similar-heading h3 { margin: 0; }
+.similar-heading .model-status { display: inline-flex; padding: 5px 8px; border-radius: 999px; color: var(--navy); background: var(--blue-soft); font-size: 13px; font-weight: 700; }
+.similar-heading .model-status.missing, .similar-heading .model-status.error { color: var(--amber); background: var(--amber-soft); }
+.similar-heading .model-status.ready { color: #17633c; background: #e8f5ed; }
 .similar-list { display: grid; gap: 10px; }
 .similar-item { padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
 .similar-item p { margin-bottom: 8px; }

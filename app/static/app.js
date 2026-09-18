@@ -1,4 +1,4 @@
-const state = { dataset: null, integrations: null, offset: 0, limit: 20, total: 0, query: "", recordsRequest: 0, recordsAbort: null, recordsLoading: false };
+const state = { dataset: null, integrations: null, integrationsRequest: 0, offset: 0, limit: 20, total: 0, query: "", recordsRequest: 0, recordsAbort: null, recordsLoading: false };
 const reservedColumns = new Set(["_record_id", "_sheet", "_source_row"]);
 const $ = (selector) => document.querySelector(selector);
 
@@ -34,34 +34,82 @@ function setActiveView(name) {
 }
 
 async function loadCurrentDataset() {
-  state.dataset = await api("/api/datasets/current");
+  try {
+    state.dataset = await api("/api/datasets/current");
+  } catch (error) {
+    state.dataset = null;
+    state.total = 0;
+    renderDatasetStatus();
+    renderAnalyticsError(error.message);
+    renderEmptyTable(`Не удалось загрузить текущий набор данных: ${error.message}`, true);
+    showNotice(`Не удалось загрузить текущий набор данных: ${error.message}`, "error");
+    return;
+  }
   renderDatasetStatus();
   await Promise.all([loadAnalytics(), loadRecords()]);
 }
 
-async function loadIntegrations() {
+async function loadIntegrations(showErrorNotice = true) {
+  const requestId = ++state.integrationsRequest;
   try {
-    state.integrations = await api("/api/integrations");
-    renderClassificationStatus(state.integrations.classification);
+    const integrations = await api("/api/integrations");
+    if (requestId !== state.integrationsRequest) return state.integrations;
+    state.integrations = integrations;
   } catch (error) {
-    renderClassificationStatus("status-error");
-    showNotice(`Не удалось получить статус интеграций: ${error.message}`, "error");
+    if (requestId !== state.integrationsRequest) return state.integrations;
+    state.integrations = {
+      classification: "status-error",
+      routing: "status-error",
+      similarity: "status-error",
+      analytics: "status-error",
+    };
+    if (showErrorNotice) showNotice(`Не удалось получить статус интеграций: ${error.message}`, "error");
   }
+  renderIntegrationStatuses();
+  return state.integrations;
+}
+
+function integrationCode(status) {
+  return String(status || "status-error").replace(/^unavailable:/, "");
+}
+
+function renderIntegrationStatus(selector, kind, status) {
+  const code = integrationCode(status);
+  const labels = {
+    classification: {
+      ready: "Статус модели: готова", "model-missing": "Статус модели: отсутствует",
+      uninitialized: "Статус модели: ожидает проверки", pending: "Статус модели: ожидает запуска",
+      "model-incompatible": "Статус модели: несовместима", "embedder-unavailable": "Статус модели: нет локальных весов",
+      "inference-error": "Статус модели: ошибка вычислений", "status-error": "Статус модели: недоступен",
+    },
+    routing: {
+      ready: "Маршрутизация: готова", "model-missing": "Маршрутизация: модель отсутствует",
+      uninitialized: "Маршрутизация: ожидает проверки", pending: "Маршрутизация: ожидает запуска",
+      "model-incompatible": "Маршрутизация: модель несовместима", "embedder-unavailable": "Маршрутизация: веса недоступны",
+      "inference-error": "Маршрутизация: ошибка вычислений", "status-error": "Маршрутизация: недоступна",
+    },
+    similarity: {
+      ready: "Поиск: доступен", "model-missing": "Поиск: модель отсутствует",
+      uninitialized: "Поиск: ожидает проверки", pending: "Поиск: ожидает запуска",
+      "model-incompatible": "Поиск: модель несовместима", "embedder-unavailable": "Поиск: веса недоступны",
+      "inference-error": "Поиск: ошибка вычислений", "status-error": "Поиск: недоступен",
+    },
+  };
+  const badge = $(selector);
+  badge.textContent = labels[kind][code] || `${kind === "classification" ? "Статус модели" : kind === "routing" ? "Маршрутизация" : "Поиск"}: ${code}`;
+  const tone = code === "ready" ? "ready" : ["pending", "uninitialized"].includes(code) ? "loading" : code === "model-missing" ? "missing" : "error";
+  badge.className = `model-status ${tone}`;
+}
+
+function renderIntegrationStatuses() {
+  const integrations = state.integrations || {};
+  renderIntegrationStatus("#classification-status", "classification", integrations.classification);
+  renderIntegrationStatus("#routing-status", "routing", integrations.routing);
+  renderIntegrationStatus("#similarity-status", "similarity", integrations.similarity);
 }
 
 function renderClassificationStatus(status) {
-  const labels = {
-    ready: "Статус модели: готова",
-    "model-missing": "Статус модели: отсутствует",
-    uninitialized: "Статус модели: ожидает проверки",
-    "model-incompatible": "Статус модели: несовместима",
-    "embedder-unavailable": "Статус модели: нет локальных весов",
-    "inference-error": "Статус модели: ошибка вычислений",
-    "status-error": "Статус модели: недоступен",
-  };
-  const badge = $("#classification-status");
-  badge.textContent = labels[status] || `Статус модели: ${status || "неизвестен"}`;
-  badge.className = `model-status ${status === "ready" ? "ready" : status === "model-missing" ? "missing" : "error"}`;
+  renderIntegrationStatus("#classification-status", "classification", status);
 }
 
 function renderDatasetStatus() {
@@ -102,6 +150,7 @@ async function submitAppeal(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    await loadIntegrations(false);
     renderAnalysis(result);
   } catch (error) {
     resetAnalysis(`Не удалось выполнить анализ: ${error.message}`);
@@ -124,8 +173,11 @@ function renderAnalysis(result) {
   $("#result-placeholder").classList.add("hidden");
   $("#result-grid").classList.remove("hidden");
   $("#manual-review").classList.toggle("hidden", !result.manual_review_required);
+  const reviewReasons = [];
+  if (result.category.needs_manual_review || !result.category.category || result.category.confidence < 0.5) reviewReasons.push("категория не подтверждена");
+  if (result.routing.needs_manual_review || !result.routing.support_line || result.routing.confidence < 0.5) reviewReasons.push("маршрут не подтверждён");
   $("#manual-review").textContent = result.manual_review_required
-    ? "Нужна ручная проверка: категория или маршрут не подтверждены с достаточной уверенностью."
+    ? `Нужна ручная проверка: ${reviewReasons.join("; ") || "результат требует подтверждения"}.`
     : "";
   $("#category-value").textContent = result.category.category || "Не определена";
   $("#category-confidence").style.width = `${Math.round(result.category.confidence * 100)}%`;
@@ -145,7 +197,11 @@ function renderAnalysis(result) {
   list.replaceChildren();
   section.classList.remove("hidden");
   if (!result.similar_appeals.length) {
-    list.innerHTML = '<div class="empty-state">Совпадений не найдено.</div>';
+    const similarityCode = integrationCode(state.integrations?.similarity);
+    const message = similarityCode === "ready"
+      ? "Совпадений не найдено."
+      : "Поиск похожих обращений недоступен; результат требует ручной проверки.";
+    list.innerHTML = `<div class="empty-state${similarityCode === "ready" ? "" : " error-state"}">${message}</div>`;
     return;
   }
   result.similar_appeals.forEach((item) => {
@@ -168,6 +224,7 @@ async function loadAnalytics() {
 }
 
 function setAnalyticsLoading() {
+  for (const selector of ["#kpi-total", "#kpi-overdue", "#kpi-mean-sla", "#kpi-median-sla"]) $(selector).textContent = "—";
   $("#kpi-status").textContent = "Загрузка…";
   $("#analytics-message").textContent = "Рассчитываем SLA-метрики…";
   renderDistribution("#category-distribution", [], "Загрузка…");
