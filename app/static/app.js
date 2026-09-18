@@ -1,4 +1,4 @@
-const state = { dataset: null, offset: 0, limit: 20, total: 0, query: "", recordsRequest: 0, recordsAbort: null, recordsLoading: false };
+const state = { dataset: null, integrations: null, offset: 0, limit: 20, total: 0, query: "", recordsRequest: 0, recordsAbort: null, recordsLoading: false };
 const reservedColumns = new Set(["_record_id", "_sheet", "_source_row"]);
 const $ = (selector) => document.querySelector(selector);
 
@@ -39,6 +39,31 @@ async function loadCurrentDataset() {
   await Promise.all([loadAnalytics(), loadRecords()]);
 }
 
+async function loadIntegrations() {
+  try {
+    state.integrations = await api("/api/integrations");
+    renderClassificationStatus(state.integrations.classification);
+  } catch (error) {
+    renderClassificationStatus("status-error");
+    showNotice(`Не удалось получить статус интеграций: ${error.message}`, "error");
+  }
+}
+
+function renderClassificationStatus(status) {
+  const labels = {
+    ready: "Статус модели: готова",
+    "model-missing": "Статус модели: отсутствует",
+    uninitialized: "Статус модели: ожидает проверки",
+    "model-incompatible": "Статус модели: несовместима",
+    "embedder-unavailable": "Статус модели: нет локальных весов",
+    "inference-error": "Статус модели: ошибка вычислений",
+    "status-error": "Статус модели: недоступен",
+  };
+  const badge = $("#classification-status");
+  badge.textContent = labels[status] || `Статус модели: ${status || "неизвестен"}`;
+  badge.className = `model-status ${status === "ready" ? "ready" : status === "model-missing" ? "missing" : "error"}`;
+}
+
 function renderDatasetStatus() {
   $("#dataset-status").textContent = state.dataset
     ? `${state.dataset.filename} · ${state.dataset.row_count} строк`
@@ -66,6 +91,7 @@ async function submitAppeal(event) {
   const button = event.currentTarget.querySelector("button[type=submit]");
   const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
   payload.service ||= null;
+  payload.component ||= null;
   payload.priority ||= null;
   button.disabled = true;
   button.textContent = "Анализируем…";
@@ -98,12 +124,21 @@ function renderAnalysis(result) {
   $("#result-placeholder").classList.add("hidden");
   $("#result-grid").classList.remove("hidden");
   $("#manual-review").classList.toggle("hidden", !result.manual_review_required);
+  $("#manual-review").textContent = result.manual_review_required
+    ? "Нужна ручная проверка: категория или маршрут не подтверждены с достаточной уверенностью."
+    : "";
   $("#category-value").textContent = result.category.category || "Не определена";
   $("#category-confidence").style.width = `${Math.round(result.category.confidence * 100)}%`;
-  $("#category-explanation").textContent = `${result.category.explanation} Уверенность: ${Math.round(result.category.confidence * 100)}%.`;
+  $("#category-confidence-label").textContent = `Уверенность: ${Math.round(result.category.confidence * 100)}%`;
+  $("#category-explanation").textContent = result.category.explanation;
+  $("#category-limitation").textContent = result.category.limitation || "";
+  $("#category-limitation").classList.toggle("hidden", !result.category.limitation);
+  $("#category-review").classList.toggle("hidden", !result.category.needs_manual_review);
   $("#line-value").textContent = result.routing.support_line || "Не определена";
   $("#line-confidence").style.width = `${Math.round(result.routing.confidence * 100)}%`;
-  $("#line-explanation").textContent = `${result.routing.explanation} Уверенность: ${Math.round(result.routing.confidence * 100)}%.`;
+  $("#line-confidence-label").textContent = `Уверенность: ${Math.round(result.routing.confidence * 100)}%`;
+  $("#line-explanation").textContent = result.routing.explanation;
+  $("#line-review").classList.toggle("hidden", !result.routing.needs_manual_review);
 
   const section = $("#similar-section");
   const list = $("#similar-list");
@@ -116,21 +151,66 @@ function renderAnalysis(result) {
   result.similar_appeals.forEach((item) => {
     const card = document.createElement("article");
     card.className = "similar-item";
-    card.innerHTML = `<strong>${escapeHtml(item.category || "Без категории")}</strong><p>${escapeHtml(item.resolution || "Решение не указано")}</p><p>Близость: ${Math.round(item.score * 100)}% · Линия: ${escapeHtml(item.support_line || "не указана")}</p>`;
-    const open = document.createElement("button");
-    open.className = "secondary";
-    open.textContent = "Открыть исходную запись";
-    open.addEventListener("click", () => openRecord(item.record_id));
-    card.append(open);
+    card.innerHTML = `<strong>${escapeHtml(item.category || "Без категории")}</strong><p>${escapeHtml(item.resolution || "Решение не указано")}</p><p>Близость: ${Math.round(item.score * 100)}% · Линия: ${escapeHtml(item.support_line || "не указана")}</p><p class="source-reference">ID в индексе модели: ${escapeHtml(item.record_id)}</p>`;
     list.append(card);
   });
 }
 
 async function loadAnalytics() {
-  const overview = await api("/api/analytics/overview");
+  setAnalyticsLoading();
+  try {
+    const overview = await api("/api/analytics/overview");
+    renderAnalytics(overview);
+  } catch (error) {
+    renderAnalyticsError(error.message);
+    showNotice(`Не удалось загрузить аналитику: ${error.message}`, "error");
+  }
+}
+
+function setAnalyticsLoading() {
+  $("#kpi-status").textContent = "Загрузка…";
+  $("#analytics-message").textContent = "Рассчитываем SLA-метрики…";
+  renderDistribution("#category-distribution", [], "Загрузка…");
+  renderDistribution("#line-distribution", [], "Загрузка…");
+}
+
+function renderAnalytics(overview) {
   $("#kpi-total").textContent = overview.total_appeals.toLocaleString("ru-RU");
-  $("#kpi-overdue").textContent = overview.overdue_share == null ? "—" : `${Math.round(overview.overdue_share * 100)}%`;
+  $("#kpi-overdue").textContent = overview.overdue_share == null
+    ? "—"
+    : `${overview.overdue_count ?? "—"} · ${Math.round(overview.overdue_share * 100)}%`;
+  $("#kpi-mean-sla").textContent = formatHours(overview.mean_sla_h);
+  $("#kpi-median-sla").textContent = formatHours(overview.median_sla_h);
   $("#kpi-status").textContent = overview.status === "ready" ? "Готово" : overview.status === "partial-data" ? "Неполные данные" : "Нет данных";
+  $("#analytics-message").textContent = overview.message || "Аналитика рассчитана по загруженному датасету.";
+  const emptyMessage = overview.status === "no-data" ? "Загрузите данные для расчёта." : "В датасете нет подходящих значений.";
+  renderDistribution("#category-distribution", overview.category_distribution || [], emptyMessage);
+  renderDistribution("#line-distribution", overview.line_distribution || [], emptyMessage);
+}
+
+function renderAnalyticsError(message) {
+  for (const selector of ["#kpi-total", "#kpi-overdue", "#kpi-mean-sla", "#kpi-median-sla"]) $(selector).textContent = "—";
+  $("#kpi-status").textContent = "Ошибка";
+  $("#analytics-message").textContent = `Не удалось загрузить SLA-аналитику: ${message}`;
+  renderDistribution("#category-distribution", [], "Ошибка загрузки.", true);
+  renderDistribution("#line-distribution", [], "Ошибка загрузки.", true);
+}
+
+function renderDistribution(selector, items, emptyMessage, isError = false) {
+  const container = $(selector);
+  if (!items.length) {
+    container.innerHTML = `<div class="empty-state compact${isError ? " error-state" : ""}">${escapeHtml(emptyMessage)}</div>`;
+    return;
+  }
+  container.innerHTML = items.map((item) => {
+    const percent = Math.round(item.share * 100);
+    return `<div class="distribution-item"><span title="${escapeHtml(item.value)}">${escapeHtml(item.value)}</span><strong>${item.count} · ${percent}%</strong><div class="distribution-bar"><i style="width:${percent}%"></i></div></div>`;
+  }).join("");
+}
+
+function formatHours(value) {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  return `${Number(value).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} ч`;
 }
 
 async function loadRecords() {
@@ -141,6 +221,7 @@ async function loadRecords() {
   state.recordsAbort = controller;
   const requestId = ++state.recordsRequest;
   state.recordsLoading = true;
+  renderEmptyTable("Загрузка записей…");
   renderPagination();
   const expected = { datasetId: state.dataset.dataset_id, query: state.query, offset: state.offset };
   const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
@@ -157,7 +238,7 @@ async function loadRecords() {
     renderRecords(page.items);
   } catch (error) {
     if (error.name === "AbortError") return;
-    if (requestId === state.recordsRequest) renderEmptyTable(error.message);
+    if (requestId === state.recordsRequest) renderEmptyTable(`Не удалось загрузить записи: ${error.message}`, true);
   } finally {
     if (requestId === state.recordsRequest) {
       state.recordsLoading = false;
@@ -185,8 +266,8 @@ function renderRecords(items) {
   wrap.querySelectorAll(".record-link").forEach((button) => button.addEventListener("click", () => openRecord(button.dataset.id)));
 }
 
-function renderEmptyTable(message) {
-  $("#table-wrap").innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+function renderEmptyTable(message, isError = false) {
+  $("#table-wrap").innerHTML = `<div class="empty-state${isError ? " error-state" : ""}">${escapeHtml(message)}</div>`;
   renderPagination();
 }
 
@@ -250,4 +331,4 @@ $("#record-search").addEventListener("input", (event) => {
   state.searchTimer = setTimeout(() => loadRecords(), 300);
 });
 $("#close-dialog").addEventListener("click", () => $("#record-dialog").close());
-loadCurrentDataset().catch((error) => showNotice(error.message, "error"));
+Promise.all([loadCurrentDataset(), loadIntegrations()]).catch((error) => showNotice(error.message, "error"));

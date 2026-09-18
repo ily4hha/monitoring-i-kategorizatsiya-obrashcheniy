@@ -51,6 +51,12 @@
                 <input name="service" maxlength="500" placeholder="Если известна" />
               </label>
               <label>
+                Компонент услуги
+                <input name="component" maxlength="500" placeholder="Если известен" />
+              </label>
+            </div>
+            <div class="form-row priority-row">
+              <label>
                 Приоритет
                 <select name="priority">
                   <option value="">Не указан</option>
@@ -76,15 +82,21 @@
             <div id="result-grid" class="result-grid hidden">
               <article class="result-card">
                 <span>Категория</span>
+                <span id="classification-status" class="model-status loading">Статус модели: проверяем…</span>
                 <strong id="category-value">—</strong>
-                <div class="confidence"><i id="category-confidence"></i></div>
+                <div class="confidence" aria-hidden="true"><i id="category-confidence"></i></div>
+                <p id="category-confidence-label" class="confidence-label">Уверенность: —</p>
                 <p id="category-explanation"></p>
+                <p id="category-limitation" class="limitation hidden"></p>
+                <span id="category-review" class="review-mark hidden">Нужна ручная проверка категории</span>
               </article>
               <article class="result-card">
                 <span>Линия поддержки</span>
                 <strong id="line-value">—</strong>
-                <div class="confidence"><i id="line-confidence"></i></div>
+                <div class="confidence" aria-hidden="true"><i id="line-confidence"></i></div>
+                <p id="line-confidence-label" class="confidence-label">Уверенность: —</p>
                 <p id="line-explanation"></p>
+                <span id="line-review" class="review-mark hidden">Нужна ручная проверка маршрута</span>
               </article>
             </div>
             <div id="similar-section" class="similar-section hidden">
@@ -98,9 +110,28 @@
       <section id="analytics-view" class="view">
         <div class="kpi-grid">
           <article class="kpi"><span>Обращения</span><strong id="kpi-total">0</strong></article>
-          <article class="kpi"><span>Доля просроченных</span><strong id="kpi-overdue">—</strong></article>
+          <article class="kpi"><span>Просрочено</span><strong id="kpi-overdue">—</strong></article>
+          <article class="kpi"><span>Средний SLA</span><strong id="kpi-mean-sla">—</strong></article>
+          <article class="kpi"><span>Медианный SLA</span><strong id="kpi-median-sla">—</strong></article>
           <article class="kpi"><span>Статус аналитики</span><strong id="kpi-status">Нет данных</strong></article>
         </div>
+        <section class="panel analytics-panel" aria-live="polite">
+          <div class="panel-heading analytics-heading">
+            <p class="section-label">SLA-аналитика</p>
+            <h2>Распределения</h2>
+            <p id="analytics-message">Загрузите Excel, чтобы построить аналитику.</p>
+          </div>
+          <div class="distribution-grid">
+            <article>
+              <h3>По категориям</h3>
+              <div id="category-distribution" class="distribution-list"><div class="empty-state compact">Нет данных.</div></div>
+            </article>
+            <article>
+              <h3>По линиям поддержки</h3>
+              <div id="line-distribution" class="distribution-list"><div class="empty-state compact">Нет данных.</div></div>
+            </article>
+          </div>
+        </section>
         <section class="panel records-panel">
           <div class="records-heading">
             <div>
