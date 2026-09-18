@@ -166,3 +166,28 @@ def test_analysis_adapter_error_returns_service_unavailable(tmp_path) -> None:
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Сервис анализа временно недоступен"}
+
+
+def test_reupload_older_dataset_reactivates_records_and_analytics(client, tmp_path):
+    first_content = workbook_from_frame(pd.DataFrame([
+        {"Тема": "First", "fact_sla_h": 10, "is_overdue": 1,
+         "category_grouped": "A", "resolved_line": "1"},
+    ]))
+    first = client.post("/api/datasets", files={"file": ("first.xlsx", first_content)}).json()
+    first_records = client.get(f"/api/datasets/{first['dataset_id']}/records").json()
+    second = client.post("/api/datasets", files={"file": ("second.xlsx", make_workbook())}).json()
+    assert client.get("/api/datasets/current").json()["dataset_id"] == second["dataset_id"]
+
+    repeated = client.post("/api/datasets", files={"file": ("first.xlsx", first_content)})
+    assert repeated.status_code == 201
+    assert repeated.json() == first
+    assert client.get("/api/datasets/current").json() == first
+    assert client.get(f"/api/datasets/{first['dataset_id']}/records").json() == first_records
+    overview = client.get("/api/analytics/overview").json()
+    assert overview["total_appeals"] == 1
+    assert overview["mean_sla_h"] == 10
+    assert overview["overdue_count"] == 1
+    # Selection survives restart; idempotent uploads do not create extra files.
+    restarted = TestClient(create_app(tmp_path / "runtime"))
+    assert restarted.get("/api/datasets/current").json() == first
+    assert len(list(client.app.state.dataset_store.upload_dir.iterdir())) == 2

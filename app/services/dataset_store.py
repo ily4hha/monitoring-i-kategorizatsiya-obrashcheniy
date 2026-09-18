@@ -109,6 +109,10 @@ class DatasetStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_records_dataset
                     ON records(dataset_id, sheet_name, row_number);
+                CREATE TABLE IF NOT EXISTS active_dataset (
+                    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+                    dataset_id TEXT NOT NULL REFERENCES datasets(id)
+                );
                 """
             )
 
@@ -219,8 +223,17 @@ class DatasetStore:
         with self._import_lock:
             existing = self._find_existing_dataset(content)
             if existing is not None:
+                with self._connect() as connection:
+                    self._activate_dataset(connection, existing.dataset_id)
                 return existing
             return self._import_content(content, filename, suffix)
+
+    @staticmethod
+    def _activate_dataset(connection, dataset_id: str) -> None:
+        connection.execute(
+            "INSERT OR REPLACE INTO active_dataset (singleton, dataset_id) VALUES (1, ?)",
+            (dataset_id,),
+        )
 
     def _find_existing_dataset(self, content: bytes) -> DatasetSummary | None:
         digest = hashlib.sha256(content).digest()
@@ -276,6 +289,7 @@ class DatasetStore:
                     # Publish the complete file before SQLite commit. Any exception,
                     # including commit failure, rolls back rows and removes this file.
                     staged.replace(stored_path)
+                    self._activate_dataset(connection, dataset_id)
             committed = True
             return summary
         except DatasetError:
@@ -292,7 +306,12 @@ class DatasetStore:
 
     def current_dataset(self) -> DatasetSummary | None:
         with self._connect() as connection:
-            row = connection.execute("SELECT * FROM datasets ORDER BY created_at DESC LIMIT 1").fetchone()
+            row = connection.execute(
+                "SELECT * FROM datasets WHERE id = (SELECT dataset_id FROM active_dataset WHERE singleton = 1)"
+            ).fetchone()
+            # Existing runtime databases have no explicit selection until the next upload.
+            if row is None:
+                row = connection.execute("SELECT * FROM datasets ORDER BY created_at DESC LIMIT 1").fetchone()
         return self._summary_from_row(row) if row else None
 
     def get_dataset(self, dataset_id: str) -> DatasetSummary:
