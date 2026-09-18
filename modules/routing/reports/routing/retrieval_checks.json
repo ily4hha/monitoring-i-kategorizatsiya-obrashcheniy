@@ -1,0 +1,1628 @@
+[
+  {
+    "id": "38019652",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38116960",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38539821",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38540814",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38540905",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38542484",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38542599",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38548674",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38549139",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38549346",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38556287",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38558484",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38558651",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38562802",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38565582",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38570288",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38571261",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38573468",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38575370",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38576373",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38580107",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38580995",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38582950",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38584031",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38586221",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38586865",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38587210",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38587525",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38591654",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38593835",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38594705",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38596775",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38597171",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38598885",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38601154",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38602224",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38602284",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38604816",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38604913",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38605254",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38606909",
+    "hits": 4,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38611095",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38616322",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38617015",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": false
+  },
+  {
+    "id": "38617037",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38618479",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38621799",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38622787",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38624093",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38625469",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38625645",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38625980",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38626015",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38626089",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38626126",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38628851",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38629696",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38630480",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38632174",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38632547",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38633939",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38634268",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38635214",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38635247",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38635940",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38638323",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38638897",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38642689",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38642962",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38643317",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38644959",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38645420",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38645430",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38646204",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38646326",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38646828",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38647383",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38647511",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38650006",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38653474",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38654686",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38660961",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38663334",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38664901",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38665792",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38667934",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38669245",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38669359",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38672407",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38672609",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38672680",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38676988",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38677306",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": false
+  },
+  {
+    "id": "38678196",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38685049",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38685587",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38687787",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38690032",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38690663",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38693316",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38693380",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38694062",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38695802",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38697420",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38698433",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38705928",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38709619",
+    "hits": 3,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38710391",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38710668",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38712339",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38713906",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38713917",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38714243",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38715557",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38715628",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38717684",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38718790",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38718990",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38720170",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38724299",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38725369",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38727325",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38730054",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38730187",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38730324",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38734964",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38742975",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38743863",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38744662",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38744861",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38748654",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38756664",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38759228",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38760125",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38765770",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38767453",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38786028",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38789857",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38798704",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38801003",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38804075",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38804978",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38814450",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38816012",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38817031",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38818729",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38828264",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38829195",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38837312",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38843256",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38855175",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38855487",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": false
+  },
+  {
+    "id": "38861850",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38870291",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": false
+  },
+  {
+    "id": "38882577",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38883540",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38886063",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38886088",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38888655",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38892070",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38895692",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38898429",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38899096",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38901182",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "38902337",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": false
+  },
+  {
+    "id": "38902517",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38904020",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38904886",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38905174",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38905195",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38907072",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38907191",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38907923",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38913188",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38913243",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38917462",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38920103",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38921783",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38923945",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38926340",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "38926896",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "38926988",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "39653240",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "39653642",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "39661969",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "39665026",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "39669657",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40383626",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "40399967",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40403360",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40405913",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40409646",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40409973",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40414683",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40417898",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40418244",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40420096",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40422352",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40437767",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40444163",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40450465",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40461130",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40463775",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40464385",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40464598",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40466842",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40467289",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40472039",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40476847",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40478423",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40481114",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "40482451",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40483009",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40483062",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40487943",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40489288",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40494413",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40500593",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40500805",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": false
+  },
+  {
+    "id": "40510705",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "40514009",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40519274",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40522888",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40529174",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40529934",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40530492",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40557407",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40559261",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40571112",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": false
+  },
+  {
+    "id": "40573555",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40581131",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40587748",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40589207",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40589900",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40595232",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40596006",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40602948",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40603599",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": false
+  },
+  {
+    "id": "40606151",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40608069",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "40609005",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40615318",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40622840",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40623581",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40628814",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40632340",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40640369",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40645788",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40653784",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40654322",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "40654629",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40659591",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40663828",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40666807",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40669087",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40669192",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40673156",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40678850",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "40681468",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40682394",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40683120",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40697244",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": false
+  },
+  {
+    "id": "40698566",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40702214",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40702727",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40703587",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40704056",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40704069",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40711061",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  },
+  {
+    "id": "40713061",
+    "hits": 5,
+    "category_hit": true,
+    "line_hit": true
+  },
+  {
+    "id": "40714045",
+    "hits": 5,
+    "category_hit": false,
+    "line_hit": true
+  }
+]

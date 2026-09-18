@@ -1,0 +1,25 @@
+{
+  "source": "C:\\Users\\Technopark\\OneDrive\\Документы\\ChatGPT\\PostCode\\reports\\routing\\source_utf8.csv",
+  "source_sha256": "eedf1b7fc3032ce8ff8f768f9512a7494e5dee6ae8e3ab5b4aef06b686bf6c80",
+  "rows": 1931,
+  "categories": 43,
+  "split_counts": {
+    "train": 1281,
+    "test": 271,
+    "review": 108,
+    "validation": 271
+  },
+  "seed": 42,
+  "grouping": "token-set Jaccard >= 0.85, connected components",
+  "duplicate_groups": 124,
+  "conflicting_groups": 44,
+  "normalized_text_changed": 1769,
+  "flags": {
+    "unknown_service": 19,
+    "repeated_text": 267,
+    "conflicting_category": 106,
+    "short_text_review": 13,
+    "missing_service_component": 619,
+    "empty_or_test_template": 2
+  }
+}
