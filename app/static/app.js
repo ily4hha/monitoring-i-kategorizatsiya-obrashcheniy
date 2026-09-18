@@ -130,7 +130,7 @@ async function loadAnalytics() {
   const overview = await api("/api/analytics/overview");
   $("#kpi-total").textContent = overview.total_appeals.toLocaleString("ru-RU");
   $("#kpi-overdue").textContent = overview.overdue_share == null ? "—" : `${Math.round(overview.overdue_share * 100)}%`;
-  $("#kpi-status").textContent = overview.status === "integration-pending" ? "Ожидает модуль" : "Нет данных";
+  $("#kpi-status").textContent = overview.status === "ready" ? "Готово" : overview.status === "partial-data" ? "Неполные данные" : "Нет данных";
 }
 
 async function loadRecords() {

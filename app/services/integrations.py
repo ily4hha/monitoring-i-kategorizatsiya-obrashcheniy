@@ -82,5 +82,5 @@ class AnalysisService:
             classification="pending",
             routing=getattr(self.router, "status", "pending"),
             similarity=getattr(self.similarity, "status", "pending"),
-            analytics="dataset-preview-ready",
+            analytics="ready",
         )

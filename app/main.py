@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.models import AppealAnalysis, AppealInput, DatasetSummary, IntegrationStatus, RecordPage
+from app.services.analytics import calculate_overview
 from app.services.dataset_store import DatasetError, DatasetStore
 from app.services.integrations import AnalysisService
 from app.services.routing import RoutingAdapter, RoutingRuntime, SimilaritySearchAdapter
@@ -109,10 +110,9 @@ def create_app(runtime_dir: Path = RUNTIME_DIR, *, analysis: AnalysisService | N
                 "status": "no-data", "total_appeals": 0, "overdue_share": None,
                 "message": "Загрузите Excel, чтобы построить аналитику.",
             }
-        return {
-            "status": "integration-pending", "total_appeals": dataset.row_count,
-            "overdue_share": None,
-            "message": "Базовый импорт готов. Расчёты SLA подключит модуль участника 3.",
-        }
+        return calculate_overview(
+            application.state.dataset_store.iter_active_records(dataset.dataset_id),
+            dataset.columns,
+        )
 
     return application

@@ -13,7 +13,7 @@ from datetime import date, datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Iterator
 
 import pandas as pd
 
@@ -347,6 +347,17 @@ class DatasetStore:
         with self._connect() as connection:
             row = connection.execute("SELECT payload_json FROM records WHERE record_id = ?", (record_id,)).fetchone()
         return json.loads(row["payload_json"]) if row else None
+
+    def iter_active_records(self, dataset_id: str) -> Iterator[dict[str, Any]]:
+        """Yield every source record from a dataset's active sheet."""
+        dataset = self.get_dataset(dataset_id)
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload_json FROM records WHERE dataset_id = ? AND sheet_name = ? ORDER BY row_number",
+                (dataset_id, dataset.active_sheet),
+            )
+            for row in rows:
+                yield json.loads(row["payload_json"])
 
     @staticmethod
     def _summary_from_row(row: sqlite3.Row) -> DatasetSummary:

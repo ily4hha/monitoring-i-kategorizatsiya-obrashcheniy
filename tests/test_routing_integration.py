@@ -27,7 +27,7 @@ def test_real_model_loaded_once_at_startup_and_shared(tmp_path, monkeypatch):
         assert model is not None
         assert model is service.similarity.runtime.assistant
         statuses = client.get("/api/integrations").json()
-        assert statuses == dict(classification="pending", routing="ready", similarity="ready", analytics="dataset-preview-ready")
+        assert statuses == dict(classification="pending", routing="ready", similarity="ready", analytics="ready")
         expected = model.recommend_line(routing.appeal_text(AppealInput(**APPEAL)))
         expected_hits = model.find_similar(routing.appeal_text(AppealInput(**APPEAL)), limit=5)
         assert expected["line"] is not None and expected_hits
