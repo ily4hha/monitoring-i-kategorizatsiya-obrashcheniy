@@ -21,7 +21,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["httpx>=0.27,<1", "pytest>=8.3,<9"]
 
+[tool.setuptools.packages.find]
+include = ["app*", "modules*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests", "modules/routing/tests"]
 pythonpath = ["modules/routing"]
-
