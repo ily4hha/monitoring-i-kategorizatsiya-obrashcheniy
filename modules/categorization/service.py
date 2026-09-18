@@ -1,85 +1,135 @@
-"""
-Модуль категоризации обращений (Участник 1).
-Использует эмбеддинги paraphrase-multilingual-mpnet-base-v2 + калиброванный RandomForest.
+"""Lazy, offline inference. Training is available only in train_categorizer.py."""
+from __future__ import annotations
 
-Использование другими участниками:
-    from service import TicketCategorizer
-    categorizer = TicketCategorizer()
-    result = categorizer.predict("Не могу войти в личный кабинет, выкидывает на главную")
-    print(result)
-    # {'category': 'Личный кабинет', 'confidence': 0.72, 'is_reliable': True}
-"""
+import logging
+from importlib.metadata import version
+from pathlib import Path
+from threading import Lock
 
-import re
-import numpy as np
-from sentence_transformers import SentenceTransformer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.calibration import CalibratedClassifierCV
-import joblib
-import os
+from .features import (
+    DEFAULT_THRESHOLD, EMBEDDER_NAME, EMBEDDING_DIM, FEATURE_VERSION,
+    OTHER_CATEGORY, build_features, clean_text,
+)
 
-DEFAULT_THRESHOLD = 0.25
-EMBEDDER_NAME = 'paraphrase-multilingual-mpnet-base-v2'
+MODEL_PATH = Path(__file__).resolve().parent / "model.pkl"
+RUNTIME_PACKAGES = ("scikit-learn", "joblib", "numpy", "sentence-transformers", "transformers", "torch")
+logger = logging.getLogger(__name__)
+
+
+def package_versions():
+    return {name: version(name) for name in RUNTIME_PACKAGES}
+
+
+def load_embedder(revision: str):
+    # A pinned snapshot must already be in the local HF cache. Never download in HTTP.
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer(
+        EMBEDDER_NAME, revision=revision, local_files_only=True,
+        trust_remote_code=False, device="cpu",
+    )
+
 
 class TicketCategorizer:
-    def __init__(self, model_path='model.pkl', threshold=DEFAULT_THRESHOLD):
+    def __init__(self, model_path=MODEL_PATH, threshold=DEFAULT_THRESHOLD):
+        if not 0 <= threshold <= 1:
+            raise ValueError("threshold must be between 0 and 1")
+        self.model_path = Path(model_path)
         self.threshold = threshold
-        # Веса трансформера скачиваются SentenceTransformer автоматически при первом запуске.
-        self.embedder = SentenceTransformer(EMBEDDER_NAME)
-        
-        # Если есть сохранённая модель — загружаем, иначе обучаем заглушку
-        if model_path and os.path.exists(model_path):
-            self.model = joblib.load(model_path)
-        else:
-            self.model = None
-            
-        self.top_15 = [
-            'Отслеживание отправлений', 'Прочее', 'Проблема с QR-код(подключение/отключение)',
-            'Электронные обращения', 'Проблемы в работе Препост/PrePost',
-            'Ошибка в приложении (восстановление работоспособности)',
-            'Формирование и закрытие емкостей', 'Проблема с push/sms/email',
-            'Импорт списков из ЛК ЮЛ', 'Письма\\бандероли',
-            'Импорт списков из архива ф.103 (zip-архив)',
-            'Проблема с авторизацией/ЭЗП/Бонусами/Доверенностями',
-            'Ошибки загрузки страницы/зависания', 'Личный кабинет',
-            'Проблема с ОПС/доставкой'
-        ]
+        self.model = None
+        self.embedder = None
+        self.status = "uninitialized" if self.model_path.is_file() else "model-missing"
+        self._lock = Lock()
 
-    def clean_text(self, text):
-        if not isinstance(text, str):
-            return ""
-        text = text.lower()
-        text = re.sub(r'тема письма[:\s]*|текст письма[:\s]*|индекс опс[:\s]*|добрый день[,!\s]*|здравствуйте[,!\s]*', ' ', text)
-        text = re.sub(r'http\S+|www\S+', ' <URL> ', text)
-        text = re.sub(r'\b\d+\b', ' <NUM> ', text)
-        return re.sub(r'\s+', ' ', text).strip()
+    clean_text = staticmethod(clean_text)
 
-    def predict(self, text, service="", component=""):
-        """
-        Категоризует одно обращение.
-        Возвращает dict: category, confidence, is_reliable, explanation
-        """
-        combined = f"{self.clean_text(text)} | {service} {component}"
-        embedding = self.embedder.encode([combined])
-        
-        if self.model is None:
-            return {
-                'category': 'Прочее / Неопределено',
-                'confidence': 0.0,
-                'is_reliable': False,
-                'explanation': 'Модель не загружена. Требуется обучение.'
-            }
-        
-        proba = self.model.predict_proba(embedding)[0]
-        pred_idx = np.argmax(proba)
-        confidence = float(proba[pred_idx])
-        category = self.model.classes_[pred_idx]
-        
-        is_reliable = (confidence >= self.threshold) and (category != 'Прочее / Неопределено')
-        
-        return {
-            'category': category if is_reliable else 'ОПЕРАТОР',
-            'confidence': round(confidence, 3),
-            'is_reliable': is_reliable,
-            'explanation': f'Уверенность модели: {confidence:.2f}. Порог: {self.threshold}.'
+    def _initialize(self):
+        if self.status != "uninitialized":
+            return
+        if not self.model_path.is_file():
+            self.status = "model-missing"
+            return
+        try:
+            import joblib
+            import warnings
+            from sklearn.exceptions import InconsistentVersionWarning
+
+            # Only an operator-provided, trusted local artifact may be loaded.
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", InconsistentVersionWarning)
+                bundle = joblib.load(self.model_path)
+            if not isinstance(bundle, dict) or bundle.get("format_version") != 1:
+                raise ValueError("Legacy artifact has no feature/version manifest; retrain it")
+            if bundle["feature_version"] != FEATURE_VERSION or bundle["embedder"] != EMBEDDER_NAME:
+                raise ValueError("Incompatible feature contract")
+            if bundle["embedding_dim"] != EMBEDDING_DIM or bundle["versions"] != package_versions():
+                raise ValueError("Incompatible dimensions or library versions")
+            revision = bundle["embedder_revision"]
+            import re
+            if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+                raise ValueError("Embedder revision must be an immutable commit SHA")
+            model = bundle["model"]
+            if model.n_features_in_ != EMBEDDING_DIM or not callable(model.predict_proba):
+                raise ValueError("Incompatible classifier")
+            if len(model.classes_) < 2 or list(model.classes_) != bundle["classes"]:
+                raise ValueError("Incompatible classes")
+        except Exception:
+            logger.exception("Categorization artifact cannot be loaded")
+            self.status = "model-incompatible"
+            return
+        try:
+            embedder = load_embedder(revision)
+            if embedder.get_sentence_embedding_dimension() != EMBEDDING_DIM:
+                raise ValueError("Incompatible embedder dimension")
+        except Exception:
+            logger.exception("Local categorization embedder unavailable")
+            self.status = "embedder-unavailable"
+            return
+        self.model, self.embedder = model, embedder
+        self.status = "ready"
+
+    def _fallback(self):
+        reasons = {
+            "model-missing": "Модель категоризации отсутствует. Требуется отдельное обучение.",
+            "model-incompatible": "Артефакт категоризации или версии библиотек несовместимы.",
+            "embedder-unavailable": "Локальные веса SentenceTransformer недоступны или несовместимы.",
+            "inference-error": "Ошибка категоризации. Требуется ручной разбор.",
         }
+        return dict(category=None, confidence=0.0, is_reliable=False,
+                    explanation=reasons.get(self.status, "Категоризация недоступна."))
+
+    def predict(self, text, service=None, component=None):
+        # Serialize first load and inference so concurrent failures cannot expose stale state.
+        with self._lock:
+            self._initialize()
+            if self.status != "ready":
+                return self._fallback()
+            try:
+                import numpy as np
+
+                embedding = self.embedder.encode(
+                    [build_features(text, service, component)],
+                    convert_to_numpy=True, normalize_embeddings=False, show_progress_bar=False,
+                )
+                if embedding.shape != (1, EMBEDDING_DIM) or not np.isfinite(embedding).all():
+                    raise ValueError("Invalid embedding")
+                proba = np.asarray(self.model.predict_proba(embedding))
+                if (proba.shape != (1, len(self.model.classes_)) or not np.isfinite(proba).all()
+                        or (proba < 0).any() or (proba > 1).any()
+                        or not np.isclose(proba.sum(), 1)):
+                    raise ValueError("Invalid classifier probabilities")
+                index = int(proba[0].argmax())
+                confidence = float(proba[0, index])
+                category = str(self.model.classes_[index])
+                reliable = confidence >= self.threshold and category != OTHER_CATEGORY
+                return dict(
+                    category=category if reliable else None, confidence=confidence,
+                    is_reliable=reliable,
+                    explanation=f"Уверенность модели: {confidence:.2f}. Порог: {self.threshold}."
+                    + (" Требуется ручной разбор." if not reliable else ""),
+                )
+            except Exception:
+                logger.exception("Categorization inference failed")
+                self.status = "inference-error"
+                self.model = self.embedder = None
+                return self._fallback()

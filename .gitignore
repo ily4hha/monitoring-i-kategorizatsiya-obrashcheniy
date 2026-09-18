@@ -15,3 +15,9 @@ uploads/
 *.sqlite
 *.sqlite3
 *.sqlite-*
+
+# Local categorization training environment and generated artifacts
+.venv-categorization/
+modules/categorization/model.pkl
+modules/categorization/model.pkl.tmp
+modules/categorization/model.json

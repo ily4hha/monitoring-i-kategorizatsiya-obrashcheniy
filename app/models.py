@@ -9,6 +9,7 @@ class AppealInput(BaseModel):
     subject: str = Field(min_length=1, max_length=500)
     description: str = Field(min_length=1, max_length=20_000)
     service: str | None = Field(default=None, max_length=500)
+    component: str | None = Field(default=None, max_length=500)
     priority: str | None = Field(default=None, max_length=100)
 
 
@@ -70,4 +71,3 @@ class IntegrationStatus(BaseModel):
     routing: str
     similarity: str
     analytics: str
-

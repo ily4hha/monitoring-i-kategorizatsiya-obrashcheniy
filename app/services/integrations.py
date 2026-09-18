@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from app.services.categorization import ClassifierAdapter
+
 from app.models import (
     AppealAnalysis,
     AppealInput,
@@ -22,17 +24,6 @@ class Router(Protocol):
 
 class SimilaritySearch(Protocol):
     def search(self, appeal: AppealInput, limit: int = 5) -> list[SimilarAppeal]: ...
-
-
-class PendingClassifier:
-    def predict(self, appeal: AppealInput) -> CategoryPrediction:
-        return CategoryPrediction(
-            category=None,
-            confidence=0,
-            explanation="Модель категоризации ещё не подключена к общему API.",
-            needs_manual_review=True,
-            limitation="Требуется интеграция модуля участника 1.",
-        )
 
 
 class PendingRouter:
@@ -56,7 +47,7 @@ class AnalysisService:
         router: Router | None = None,
         similarity: SimilaritySearch | None = None,
     ) -> None:
-        self.classifier = classifier or PendingClassifier()
+        self.classifier = classifier if classifier is not None else ClassifierAdapter()
         self.router = router or PendingRouter()
         self.similarity = similarity or PendingSimilaritySearch()
 
@@ -79,7 +70,7 @@ class AnalysisService:
 
     def status(self) -> IntegrationStatus:
         return IntegrationStatus(
-            classification="pending",
+            classification=getattr(self.classifier, "status", "pending"),
             routing=getattr(self.router, "status", "pending"),
             similarity=getattr(self.similarity, "status", "pending"),
             analytics="ready",
