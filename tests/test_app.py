@@ -8,7 +8,9 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.models import AppealInput, CategoryPrediction, RoutingPrediction
+from app.services.categorization import ClassifierAdapter
 from app.services.integrations import AnalysisService
+from modules.categorization.service import TicketCategorizer
 
 
 @pytest.fixture()
@@ -63,15 +65,18 @@ def test_upload_and_read_records(client) -> None:
     assert records["items"][0]["Тема"] == "Не приходит письмо"
 
 
-def test_pending_integrations_require_manual_review(client) -> None:
-    response = client.post(
-        "/api/appeals/analyze",
-        json={"subject": "Проблема", "description": "Не удаётся выполнить действие"},
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert result["manual_review_required"] is True
-    assert result["category"]["confidence"] == 0
+def test_pending_integrations_require_manual_review(tmp_path) -> None:
+    classifier = ClassifierAdapter(TicketCategorizer(tmp_path / "missing-model.pkl"))
+    analysis = AnalysisService(classifier=classifier)
+    with TestClient(create_app(tmp_path / "runtime", analysis=analysis)) as client:
+        response = client.post(
+            "/api/appeals/analyze",
+            json={"subject": "Проблема", "description": "Не удаётся выполнить действие"},
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["manual_review_required"] is True
+        assert result["category"]["confidence"] == 0
 
 
 @pytest.mark.parametrize("name,content", [("empty.xlsx", b""), ("broken.xlsx", b"not an excel")])

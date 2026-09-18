@@ -236,6 +236,11 @@ def test_training_roundtrip_with_mock_embedder_and_real_classifier(tmp_path, mon
     reports = [training.train_model(source, output, "a" * 40) for output in outputs]
     assert reports[0] == reports[1]
     assert reports[0]["metrics"]["holdout_accuracy"] == 1
+    assert reports[0]["metrics"]["holdout_macro_f1"] == 1
+    assert reports[0]["metrics"]["coverage"] == 1
+    assert reports[0]["metrics"]["fallback_rate"] == 0
+    assert reports[0]["metrics"]["automatic_macro_f1"] == 1
+    assert set(reports[0]["metrics"]["per_class_holdout"]) == {"alpha", "beta"}
     for output in outputs:
         manifest = json.loads(output.with_suffix(".json").read_text())
         assert manifest["feature_version"] == service.FEATURE_VERSION

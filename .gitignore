@@ -18,8 +18,6 @@ uploads/
 *.db
 *.db-*
 
-# Local categorization training environment and generated artifacts
+# Local categorization training environment and temporary artifacts
 .venv-categorization/
-modules/categorization/model.pkl
 modules/categorization/model.pkl.tmp
-modules/categorization/model.json

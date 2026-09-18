@@ -15,6 +15,11 @@ APPEAL = {"subject": "Ошибка авторизации", "description": "Не
 
 
 def test_real_model_loaded_once_at_startup_and_shared(tmp_path, monkeypatch):
+    classifier = Mock(status="model-missing")
+    classifier.predict.return_value = CategoryPrediction(
+        category=None, confidence=0, explanation="Модель отсутствует.", needs_manual_review=True,
+    )
+    monkeypatch.setattr("app.services.integrations.ClassifierAdapter", lambda: classifier)
     original = joblib.load
     loads = Mock(wraps=original)
     monkeypatch.setattr(joblib, "load", loads)

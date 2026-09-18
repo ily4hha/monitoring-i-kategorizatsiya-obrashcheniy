@@ -86,7 +86,7 @@ def fit_classifier(embeddings, labels):
 def train_model(source: Path, output: Path, revision: str):
     import joblib
     import numpy as np
-    from sklearn.metrics import accuracy_score, f1_score
+    from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_support
     from .service import load_embedder, package_versions
 
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
@@ -112,20 +112,37 @@ def train_model(source: Path, output: Path, revision: str):
     proba = model.predict_proba(embeddings[len(train):])
     predictions = model.classes_[proba.argmax(axis=1)]
     reliable = (proba.max(axis=1) >= DEFAULT_THRESHOLD) & (predictions != OTHER_CATEGORY)
+    labels = model.classes_.tolist()
+    precision, recall, per_class_f1, support = precision_recall_fscore_support(
+        test["target"], predictions, labels=labels, zero_division=0,
+    )
     report["metrics"] = {
         "holdout_accuracy": float(accuracy_score(test["target"], predictions)),
         "holdout_macro_f1": float(f1_score(test["target"], predictions, average="macro", zero_division=0)),
+        "coverage": float(reliable.mean()),
         "fallback_rate": float(1 - reliable.mean()),
         "automatic_count": int(reliable.sum()),
         "automatic_accuracy": (float(accuracy_score(test["target"][reliable], predictions[reliable]))
                                if reliable.any() else None),
+        "automatic_macro_f1": (float(f1_score(
+            test["target"][reliable], predictions[reliable], average="macro", zero_division=0,
+        )) if reliable.any() else None),
+        "per_class_holdout": {
+            label: {
+                "precision": float(precision[index]),
+                "recall": float(recall[index]),
+                "f1": float(per_class_f1[index]),
+                "support": int(support[index]),
+            }
+            for index, label in enumerate(labels)
+        },
     }
     report.update({
         "format_version": 1, "feature_version": FEATURE_VERSION,
         "embedder": EMBEDDER_NAME, "embedder_revision": revision, "embedding_dim": EMBEDDING_DIM,
         "versions": versions, "python": platform.python_version(),
         "environment": sorted(f"{d.metadata['Name']}=={d.version}" for d in distributions()),
-        "classes": model.classes_.tolist(), "threshold": DEFAULT_THRESHOLD,
+        "classes": labels, "threshold": DEFAULT_THRESHOLD,
         "training": {"n_estimators": 400, "max_depth": 20, "min_samples_leaf": 3,
                      "class_weight": "balanced", "calibration": "isotonic", "cv": 3, "device": "cpu"},
     })

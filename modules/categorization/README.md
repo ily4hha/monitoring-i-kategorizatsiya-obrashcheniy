@@ -1,17 +1,25 @@
-# Категоризация: воспроизводимый fallback
+# Категоризация: локальная модель и fail-closed fallback
 
-**Рабочая модель категоризации не поставляется. Автоматическая классификация на реальных данных не подтверждена.** Приложение запускается без `model.pkl`, SentenceTransformer и PyTorch. API возвращает `classification: "model-missing"`, `category: null`, `confidence: 0`, `needs_manual_review: true`. Обучение и скачивание весов внутри HTTP-запроса отсутствуют.
+`model.pkl` обучен на реальном комплектном Excel и поставляется в Git. Веса SentenceTransformer остаются вне Git. При наличии точных runtime-версий и локального snapshot API лениво переходит из `uninitialized` в `ready`. При отсутствии артефакта, весов или совместимой среды остаётся безопасный ручной fallback. Обучение и скачивание весов внутри HTTP-запроса отсутствуют.
 
 ## Результат проверки артефактов
 
-Проверено 18.09.2026:
+Проверено 19.09.2026:
 
-- В каталоге хакатона, Documents, Downloads, Desktop, Codex worktrees и истории доступных Git-веток не найден `model.pkl` для категоризации. Единственный проектный `joblib` — `modules/routing/reports/routing/assistant.joblib`; он относится к маршрутизации и не заменяет классификатор категорий. Тестовые pickle из site-packages не являются моделями проекта.
-- `notebook.ipynb` содержит код RandomForest + isotonic calibration и сохранённые текстовые/widget-выходы. В выводе обучающей ячейки нет строки о сохранении `model.pkl`, присутствующей в текущем коде. Веса или сериализованный классификатор не вложены. Другие найденные notebooks (`data/sla_analytics.ipynb` и родительский `hackathon.ipynb`) относятся к SLA.
-- В локальном Hugging Face cache есть faster-whisper, но нет `paraphrase-multilingual-mpnet-base-v2`. PyTorch, transformers и sentence-transformers в рабочем `.venv` не установлены. Ничего из этого не скачивалось.
-- Рабочая среда: Python 3.14.6, pandas 3.0.5, NumPy 2.5.3, scikit-learn 1.7.2, joblib 1.5.2. Версии среды, создавшей сохранённые notebook-выводы, неизвестны. Исходные открытые нижние границы зависимостей не обеспечивали воспроизводимость.
+- Артефакт обучен в отдельном `.venv-categorization` на Python 3.11.16 и pinned-зависимостях из `requirements.txt`.
+- Использован snapshot `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` revision `4328cf26390c98c5e3c738b4460a05b95f4911f5`; скачаны только config, tokenizer, pooling и `model.safetensors`, без ONNX/OpenVINO/TensorFlow и дубля `pytorch_model.bin`.
+- `model.pkl` занимает 21 445 345 байт, `model.json` — 143 454 байт; артефакт подходит для обычного Git, LFS не требуется.
 
 Исторические notebook-метрики: fallback 39.1%, accuracy автоматических ответов 0.5066, macro-F1 автоматических ответов 0.4034. «Business Macro-F1» 0.4690 рассчитан **только на принятых моделью ответах с истинной категорией из top-15**, а не на всех обращениях. Эти цифры не являются результатом нынешнего API или нового скрипта. Новый split и очистка отличаются, поэтому совпадение с ними не ожидается.
+
+## Реальные holdout-метрики
+
+- accuracy на всём holdout: 0,4931; macro-F1: 0,3887;
+- coverage: 68,14% (246 из 361); fallback rate: 31,86%;
+- accuracy на автоматических ответах: 0,5081; macro-F1: 0,3982;
+- наиболее проблемные target-классы по holdout F1: `Проблема с ОПС/доставкой` — 0,0000, `Ошибки загрузки страницы/зависания` — 0,1176, `Письма\\бандероли` — 0,1429, `Личный кабинет` — 0,1538.
+
+Качество низкое: `ready` означает только техническую доступность. Модель не следует использовать для автономных решений; существующие пороги и ручную проверку нужно сохранить. Полные per-class-метрики хранятся в `model.json`.
 
 ## Общий контракт признаков
 
@@ -40,26 +48,43 @@ clean_text(description) + " | " + service + " " + component
 
 ## Отдельное обучение
 
-`requirements.txt` фиксирует целевые версии прямых зависимостей для отдельной среды **Python 3.11**. Эта полная transformer-среда здесь не устанавливалась и настоящее обучение ещё не проверено. Не устанавливайте её поверх рабочего Python 3.14 `.venv`.
+`requirements.txt` фиксирует целевые версии прямых зависимостей для отдельной среды **Python 3.11**. Не устанавливайте её поверх основной `.venv`.
 
 После согласования установки тяжёлых зависимостей и получения весов создайте среду:
 
 ```bash
 python3.11 -m venv .venv-categorization
 .venv-categorization/bin/python -m pip install -r modules/categorization/requirements.txt
+.venv-categorization/bin/python -m pip install -e '.[dev]'
 ```
 
-Веса должны быть заранее помещены в локальный Hugging Face cache. Укажите конкретный 40-символьный commit SHA имеющегося snapshot; `main` не принимается. Скрипт не скачивает веса, в том числе при отсутствии локального snapshot:
+Скачайте только необходимые файлы pinned snapshot в локальный Hugging Face cache:
+
+```bash
+.venv-categorization/bin/hf download sentence-transformers/paraphrase-multilingual-mpnet-base-v2 \
+  1_Pooling/config.json config.json config_sentence_transformers.json model.safetensors \
+  modules.json sentence_bert_config.json sentencepiece.bpe.model special_tokens_map.json \
+  tokenizer.json tokenizer_config.json \
+  --revision 4328cf26390c98c5e3c738b4460a05b95f4911f5 --max-workers 4
+```
+
+Скрипт обучения сам ничего не скачивает. Он принимает только 40-символьный commit SHA; `main` не принимается:
 
 ```bash
 .venv-categorization/bin/python -m modules.categorization.train_categorizer \
-  --embedder-revision "$CATEGORIZER_REVISION" \
-  --output modules/categorization/model.pkl
+  --embedder-revision 4328cf26390c98c5e3c738b4460a05b95f4911f5 \
+  --output /tmp/model-reproduced.pkl
 ```
 
 Скрипт фиксирует seed 42, CPU, один поток, split 80/20 и параметры RandomForest (400 деревьев, depth 20, leaf 3, balanced) + isotonic CV=3. Сохраняет bundle `model.pkl` и читаемый `model.json`: SHA-256 данных, хеши признаков train/test, классы, параметры, ревизию эмбеддера, версии библиотек и всей среды, полные holdout-метрики и долю fallback. Для повторения используйте тот же источник, snapshot, Python и версии из manifest; битовое совпадение между разными платформами не гарантируется. Существующий output не перезаписывается.
 
-Проверено обучение настоящего sklearn-классификатора на синтетических данных с mock-эмбеддером, повторяемость split/метрик, сохранение и загрузка артефакта. Это проверка механики, **не качества модели на обращениях**.
+Проверены и unit-механика с mock-эмбеддером, и полное обучение/загрузка реального артефакта.
+
+Для запуска API с категоризацией используйте эту же среду:
+
+```bash
+.venv-categorization/bin/python -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
+```
 
 ## Подключение и статусы
 
