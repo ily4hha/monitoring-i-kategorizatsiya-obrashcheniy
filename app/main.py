@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.models import AppealAnalysis, AppealInput, DatasetSummary, IntegrationStatus, RecordPage
+from app.models import (
+    AnalyticsOverview, AppealAnalysis, AppealInput, DatasetSummary,
+    HealthStatus, ImportedRecord, IntegrationStatus, RecordPage,
+)
 from app.services.analytics import calculate_overview
 from app.services.dataset_store import DatasetError, DatasetStore
 from app.services.integrations import AnalysisService
@@ -24,11 +28,18 @@ MAX_OFFSET = 100_000
 def create_app(runtime_dir: Path = RUNTIME_DIR, *, analysis: AnalysisService | None = None) -> FastAPI:
     """Create runtime resources only when explicitly called (Uvicorn --factory)."""
     runtime = RoutingRuntime()
+    dataset_store = DatasetStore(runtime_dir)
+    analysis_service = analysis if analysis is not None else AnalysisService(
+        router=RoutingAdapter(runtime), similarity=SimilaritySearchAdapter(dataset_store),
+    )
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         if analysis is None:
             runtime.start()
+        refresh = getattr(analysis_service, "refresh_similarity_index", None)
+        if refresh is not None:
+            refresh()
         yield
 
     application = FastAPI(
@@ -38,17 +49,15 @@ def create_app(runtime_dir: Path = RUNTIME_DIR, *, analysis: AnalysisService | N
         description="API общего приложения команды хакатона.",
     )
     application.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    application.state.dataset_store = DatasetStore(runtime_dir)
-    application.state.analysis_service = analysis if analysis is not None else AnalysisService(
-        router=RoutingAdapter(runtime), similarity=SimilaritySearchAdapter(runtime),
-    )
+    application.state.dataset_store = dataset_store
+    application.state.analysis_service = analysis_service
     uploads = APIRouter(route_class=LimitedUploadRoute)
 
     @application.get("/", include_in_schema=False)
     def index() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html")
 
-    @application.get("/api/health")
+    @application.get("/api/health", response_model=HealthStatus)
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
@@ -61,7 +70,11 @@ def create_app(runtime_dir: Path = RUNTIME_DIR, *, analysis: AnalysisService | N
         if not file.filename:
             raise HTTPException(status_code=400, detail="Имя файла отсутствует")
         try:
-            return application.state.dataset_store.import_excel(file.file, file.filename)
+            dataset = application.state.dataset_store.import_excel(file.file, file.filename)
+            refresh = getattr(application.state.analysis_service, "refresh_similarity_index", None)
+            if refresh is not None:
+                refresh()
+            return dataset
         except DatasetError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -85,7 +98,7 @@ def create_app(runtime_dir: Path = RUNTIME_DIR, *, analysis: AnalysisService | N
         except DatasetError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    @application.get("/api/records/{record_id}")
+    @application.get("/api/records/{record_id}", response_model=ImportedRecord)
     def record(record_id: str) -> dict:
         item = application.state.dataset_store.get_record(record_id)
         if item is None:
@@ -102,17 +115,30 @@ def create_app(runtime_dir: Path = RUNTIME_DIR, *, analysis: AnalysisService | N
                 detail="Сервис анализа временно недоступен",
             ) from exc
 
-    @application.get("/api/analytics/overview")
-    def analytics_overview() -> dict:
+    @application.get("/api/analytics/overview", response_model=AnalyticsOverview)
+    def analytics_overview(
+        date_from: date | None = Query(default=None),
+        date_to: date | None = Query(default=None),
+        service: str | None = Query(default=None, max_length=500),
+        category: str | None = Query(default=None, max_length=500),
+        priority: str | None = Query(default=None, max_length=100),
+        line: str | None = Query(default=None, max_length=500),
+    ) -> dict:
+        if date_from is not None and date_to is not None and date_from > date_to:
+            raise HTTPException(status_code=400, detail="date_from не может быть позже date_to")
         dataset = application.state.dataset_store.current_dataset()
-        if dataset is None:
-            return {
-                "status": "no-data", "total_appeals": 0, "overdue_share": None,
-                "message": "Загрузите Excel, чтобы построить аналитику.",
-            }
-        return calculate_overview(
-            application.state.dataset_store.iter_active_records(dataset.dataset_id),
-            dataset.columns,
+        overview = calculate_overview(
+            application.state.dataset_store.iter_active_records(dataset.dataset_id) if dataset else (),
+            dataset.columns if dataset else (),
+            date_from=date_from,
+            date_to=date_to,
+            service=service,
+            category=category,
+            priority=priority,
+            line=line,
         )
+        if dataset is None:
+            overview["message"] = "Загрузите Excel, чтобы построить аналитику."
+        return overview
 
     return application

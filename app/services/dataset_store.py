@@ -19,6 +19,13 @@ import pandas as pd
 
 from app.models import DatasetSheet, DatasetSummary, RecordPage
 from app.services.excel_reader import DatasetError, ExcelLimits, read_workbook, validate_xlsx_archive
+from app.services.preprocessing import (
+    category_for_frequency,
+    enriched_columns,
+    needs_historical_preprocessing,
+    preprocess_record,
+    select_top_categories,
+)
 
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
@@ -201,6 +208,59 @@ class DatasetStore:
         flush()
         return DatasetSheet(name=sheet_name, row_count=row_count, columns=columns)
 
+    @staticmethod
+    def _preprocess_sheet(connection, dataset_id: str, sheet: DatasetSheet) -> DatasetSheet:
+        """Enrich a recognized historical sheet inside the import transaction."""
+        if not needs_historical_preprocessing(sheet.columns):
+            return sheet
+
+        counts: Counter[str] = Counter()
+        rows = connection.execute(
+            "SELECT payload_json FROM records WHERE dataset_id = ? AND sheet_name = ? ORDER BY row_number",
+            (dataset_id, sheet.name),
+        )
+        for row in rows:
+            category = category_for_frequency(json.loads(row["payload_json"]))
+            if category is not None:
+                counts[category] += 1
+        top_categories = select_top_categories(counts)
+
+        cursor = connection.execute(
+            "SELECT record_id, payload_json FROM records "
+            "WHERE dataset_id = ? AND sheet_name = ? ORDER BY row_number",
+            (dataset_id, sheet.name),
+        )
+        while batch_rows := cursor.fetchmany(INSERT_BATCH_SIZE):
+            updates = []
+            for row in batch_rows:
+                payload = preprocess_record(json.loads(row["payload_json"]), top_categories)
+                updates.append((json.dumps(payload, ensure_ascii=False, default=str), row["record_id"]))
+            connection.executemany(
+                "UPDATE records SET payload_json = ? WHERE record_id = ?",
+                updates,
+            )
+        return sheet.model_copy(update={"columns": enriched_columns(sheet.columns)})
+
+    def _ensure_preprocessed(self, connection, summary: DatasetSummary) -> DatasetSummary:
+        """Backfill datasets imported by versions that stored only raw columns."""
+        sheets = [
+            self._preprocess_sheet(connection, summary.dataset_id, sheet)
+            for sheet in summary.sheets
+        ]
+        if sheets == summary.sheets:
+            return summary
+        active = next(sheet for sheet in sheets if sheet.name == summary.active_sheet)
+        updated = summary.model_copy(update={"columns": active.columns, "sheets": sheets})
+        connection.execute(
+            "UPDATE datasets SET columns_json = ?, sheets_json = ? WHERE id = ?",
+            (
+                json.dumps(updated.columns, ensure_ascii=False),
+                json.dumps([sheet.model_dump() for sheet in sheets], ensure_ascii=False),
+                updated.dataset_id,
+            ),
+        )
+        return updated
+
     def import_excel(self, file: BinaryIO, filename: str) -> DatasetSummary:
         suffix = Path(filename).suffix.lower()
         if suffix not in ALLOWED_SUFFIXES:
@@ -224,6 +284,7 @@ class DatasetStore:
             existing = self._find_existing_dataset(content)
             if existing is not None:
                 with self._connect() as connection:
+                    existing = self._ensure_preprocessed(connection, existing)
                     self._activate_dataset(connection, existing.dataset_id)
                 return existing
             return self._import_content(content, filename, suffix)
@@ -271,7 +332,7 @@ class DatasetStore:
                         for sheet_name, source_rows in workbook:
                             sheet = self._insert_sheet(connection, dataset_id, sheet_name, source_rows)
                             if sheet is not None:
-                                sheets.append(sheet)
+                                sheets.append(self._preprocess_sheet(connection, dataset_id, sheet))
                         if not sheets:
                             raise DatasetError("В книге нет непустых листов")
                         active = max(sheets, key=lambda sheet: sheet.row_count)
@@ -312,14 +373,14 @@ class DatasetStore:
             # Existing runtime databases have no explicit selection until the next upload.
             if row is None:
                 row = connection.execute("SELECT * FROM datasets ORDER BY created_at DESC LIMIT 1").fetchone()
-        return self._summary_from_row(row) if row else None
+            return self._ensure_preprocessed(connection, self._summary_from_row(row)) if row else None
 
     def get_dataset(self, dataset_id: str) -> DatasetSummary:
         with self._connect() as connection:
             row = connection.execute("SELECT * FROM datasets WHERE id = ?", (dataset_id,)).fetchone()
-        if row is None:
-            raise DatasetError("Датасет не найден")
-        return self._summary_from_row(row)
+            if row is None:
+                raise DatasetError("Датасет не найден")
+            return self._ensure_preprocessed(connection, self._summary_from_row(row))
 
     def list_records(self, dataset_id: str, *, limit: int = 25, offset: int = 0, query: str | None = None) -> RecordPage:
         dataset = self.get_dataset(dataset_id)

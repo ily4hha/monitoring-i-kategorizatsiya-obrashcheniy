@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.services.analytics import MISSING_VALUE, calculate_overview
+from app.services.analytics import ANALYTICS_COLUMNS, MISSING_VALUE, calculate_overview
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sla_analytics.csv"
@@ -34,7 +34,7 @@ def workbook_from_frame(frame: pd.DataFrame) -> bytes:
 def test_sla_formulas_and_distributions(sla_frame) -> None:
     overview = calculate_overview(sla_frame.to_dict("records"), sla_frame.columns)
 
-    assert overview["status"] == "ready"
+    assert overview["status"] == "partial-data"
     assert overview["total_appeals"] == 4
     assert overview["overdue_count"] == 2
     assert overview["overdue_share"] == pytest.approx(0.5)
@@ -58,7 +58,7 @@ def test_missing_columns_return_partial_metrics() -> None:
     assert overview["overdue_share"] is None
     assert overview["mean_sla_h"] == overview["median_sla_h"] == 2.5
     assert overview["category_distribution"] == overview["line_distribution"] == []
-    assert overview["missing_columns"] == ["category_grouped", "is_overdue", "resolved_line"]
+    assert overview["missing_columns"] == sorted(ANALYTICS_COLUMNS - {"fact_sla_h"})
 
 
 def test_empty_records_are_handled() -> None:
@@ -83,13 +83,96 @@ def test_analytics_api_uses_uploaded_dataset(client, sla_frame) -> None:
 
 
 def test_analytics_api_preserves_legacy_no_data_fields(client) -> None:
-    assert client.get("/api/analytics/overview").json() == {
+    data = client.get("/api/analytics/overview").json()
+    expected_legacy_fields = {
         "status": "no-data",
         "total_appeals": 0,
         "overdue_share": None,
         "message": "Загрузите Excel, чтобы построить аналитику.",
     }
+    assert {key: data[key] for key in expected_legacy_fields} == expected_legacy_fields
 
 
 def test_integrations_reports_analytics_ready(client) -> None:
     assert client.get("/api/integrations").json()["analytics"] == "ready"
+
+
+def _complete_record(**overrides):
+    record = {
+        "ticket_id": "1",
+        "reg_dt": "2025-01-01T12:00:00",
+        "service": "Услуга A",
+        "category_original": "Категория A",
+        "category_grouped": "Категория A",
+        "priority": "Высокий",
+        "resolved_line": "1 линия",
+        "fact_sla_h": 2,
+        "is_overdue": 0,
+        "is_multiline": 0,
+        "is_high_clarifications": 0,
+        "total_work_h": 1,
+        "total_react_h": 1,
+    }
+    record.update(overrides)
+    return record
+
+
+def test_filters_and_sla_breakdowns() -> None:
+    records = [
+        _complete_record(ticket_id="1", reg_dt="2025-01-01T23:59:59", fact_sla_h=2),
+        _complete_record(ticket_id="2", reg_dt="2025-01-02T00:00:00", fact_sla_h=4, is_overdue=1),
+        _complete_record(ticket_id="3", reg_dt="2025-01-02T10:00:00", service="Услуга B", fact_sla_h=8),
+        _complete_record(ticket_id="4", reg_dt="2025-01-03T10:00:00", priority="Низкий", resolved_line="2 линия"),
+    ]
+
+    overview = calculate_overview(
+        records,
+        ANALYTICS_COLUMNS,
+        date_from="2025-01-02",
+        date_to="2025-01-02",
+        service="Услуга A",
+        category="Категория A",
+        priority="Высокий",
+        line="1 линия",
+    )
+
+    assert overview["status"] == "ready"
+    assert overview["kpis"]["total_appeals"] == 1
+    assert overview["kpis"]["mean_sla_h"] == 4
+    assert overview["applied_filters"]["date_to"] == "2025-01-02"
+    assert overview["sample_sizes"] == {
+        "source_records": 4,
+        "filtered_records": 1,
+        "sla_records": 1,
+        "overdue_records": 1,
+        "multiline_records": 1,
+        "clarification_records": 1,
+    }
+    service_row = overview["sla_breakdowns"]["services"][0]
+    assert service_row["value"] == "Услуга A"
+    assert service_row["overdue_share"] == 1
+    assert service_row["median_sla_h"] == 4
+
+
+def test_historical_risk_marks_elevated_and_small_groups() -> None:
+    records = [
+        *[_complete_record(ticket_id=f"a{i}", category_original="A", category_grouped="A", is_overdue=int(i < 2)) for i in range(3)],
+        *[_complete_record(ticket_id=f"b{i}", category_original="B", category_grouped="B", is_overdue=0) for i in range(3)],
+        _complete_record(ticket_id="tiny", category_original="Tiny", category_grouped="Tiny", resolved_line="4 линия", is_overdue=1),
+    ]
+    overview = calculate_overview(records, ANALYTICS_COLUMNS, risk_min_group_size=3)
+    risks = {row["value"]: row for row in overview["historical_sla_risk"]["categories"]}
+
+    assert "не прогноз" in overview["historical_sla_risk"]["definition"].casefold()
+    assert risks["A"]["status"] == "elevated"
+    assert risks["A"]["is_reliable"] is True
+    assert risks["A"]["overdue_share"] == pytest.approx(2 / 3)
+    assert risks["Tiny"]["status"] == "insufficient-sample"
+    assert risks["Tiny"]["is_reliable"] is False
+    assert risks["Tiny"]["is_elevated_historical_risk"] is False
+    assert "Недостаточно наблюдений" in risks["Tiny"]["reliability_message"]
+
+
+def test_analytics_api_validates_date_range(client) -> None:
+    response = client.get("/api/analytics/overview?date_from=2025-02-01&date_to=2025-01-01")
+    assert response.status_code == 400

@@ -9,7 +9,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 class Element {
   constructor() {
     this.classes = new Set(); this.children = []; this.listeners = {}; this.style = {}; this.dataset = {};
-    this.textContent = ''; this.innerHTML = ''; this.value = ''; this.disabled = false;
+    this.attributes = {}; this.textContent = ''; this.innerHTML = ''; this.value = ''; this.disabled = false;
     this.classList = {
       add: x => this.classes.add(x), remove: x => this.classes.delete(x), contains: x => this.classes.has(x),
       toggle: (x, force) => force ? this.classes.add(x) : this.classes.delete(x),
@@ -18,6 +18,9 @@ class Element {
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; this.innerHTML = ''; }
   addEventListener(event, handler) { this.listeners[event] = handler; }
+  setAttribute(name, value) { this.attributes[name] = String(value); }
+  getAttribute(name) { return this.attributes[name]; }
+  reset() { this.value = ''; }
   querySelectorAll() { return []; }
   showModal() { this.open = true; }
   close() { this.open = false; }
@@ -32,7 +35,7 @@ async function harness() {
     AbortController, URLSearchParams, console,
     setTimeout: (fn, delay) => { timers.set(++timerId, { fn, delay }); return timerId; },
     clearTimeout: id => timers.delete(id),
-    FormData: class { entries() { return [['subject', 'Subject'], ['description', 'Description']]; } },
+    FormData: class { append() {} entries() { return [['subject', 'Subject'], ['description', 'Description']]; } },
     fetch: async url => ({ ok: true, json: async () => url === '/api/datasets/current' ? null : { total_appeals: 0 } }),
   });
   const run = code => vm.runInContext(code, context);
@@ -130,12 +133,12 @@ test('an old request error cannot replace the new search loading state', async (
   assert.equal(h.run('state.recordsLoading'), true);
 });
 
-test('record dialog keeps underscore and star user fields, hides only actual metadata', async () => {
+test('record dialog keeps user fields with readable labels and hides only actual metadata', async () => {
   const h = await harness();
   const pending = h.run('openRecord("id")');
-  h.reply(0, { _record_id: 'id', _sheet: 'Sheet', _source_row: 2, _customer: 'User', '*custom': 'Star', Text: 'Value' });
+  h.reply(0, { _record_id: 'id', record_id: 'id', _sheet: 'Sheet', _source_row: 2, _customer: 'User', '*custom': 'Star', Text: 'Value', 'Unnamed: 34': null });
   await pending;
-  assert.deepEqual(h.el('#record-details').children.map(child => child.textContent), ['_customer', 'User', '*custom', 'Star', 'Text', 'Value']);
+  assert.deepEqual(h.el('#record-details').children.map(child => child.textContent), ['Customer', 'User', 'Custom', 'Star', 'Текст', 'Value']);
   assert.equal(h.el('#record-dialog').open, true);
 });
 
@@ -153,9 +156,9 @@ test('current dataset loading failure renders analytics and records error states
   const pending = h.run('loadCurrentDataset()');
   h.requests[0].reject(new Error('Connection lost'));
   await pending;
-  assert.equal(h.el('#kpi-status').textContent, 'Ошибка');
+  assert.equal(h.el('#kpi-status').textContent, 'Не удалось обновить');
   assert.match(h.el('#analytics-message').textContent, /Connection lost/);
-  assert.match(h.el('#table-wrap').innerHTML, /Не удалось загрузить текущий набор данных/);
+  assert.match(h.el('#table-wrap').innerHTML, /Не удалось загрузить историю обращений/);
   assert.match(h.el('#table-wrap').innerHTML, /error-state/);
   assert.equal(h.el('#page-label').textContent, '0–0 из 0');
 });
@@ -179,22 +182,27 @@ test('analysis renders honest categorization fallback, confidence, route, and ma
     renderIntegrationStatuses(); renderAnalysis({
     category: {category: null, confidence: 0, explanation: "Модель отсутствует.", limitation: "Категоризация недоступна: model-missing", needs_manual_review: true},
     routing: {support_line: "2 линия", confidence: .82, explanation: "Похожий профиль обращения.", needs_manual_review: false},
-    similar_appeals: [{record_id: "model-17", score: .74, category: "Почта", support_line: "2 линия", resolution: "Проверить очередь"}],
+    similar_appeals: [{record_id: "a01b23456789cdef0123", appeal_number: "INC-17", score: .74, category: "Почта", support_line: "2 линия", resolution: "Проверить очередь", score_description: "Сходство TF-IDF; не вероятность.", explanation: "Совпали термины: <почта>."}],
     manual_review_required: true
   })`);
-  assert.equal(h.el('#classification-status').textContent, 'Статус модели: отсутствует');
+  assert.equal(h.el('#classification-status').textContent, 'Нужна ручная проверка');
   assert.equal(h.el('#category-value').textContent, 'Не определена');
-  assert.equal(h.el('#category-confidence-label').textContent, 'Уверенность: 0%');
+  assert.equal(h.el('#category-confidence-label').textContent, 'Оценка модели: 0%');
   assert.equal(h.el('#category-limitation').classList.contains('hidden'), false);
+  assert.doesNotMatch(h.el('#category-limitation').textContent, /model-missing/);
   assert.equal(h.el('#category-review').classList.contains('hidden'), false);
-  assert.equal(h.el('#routing-status').textContent, 'Маршрутизация: готова');
+  assert.equal(h.el('#routing-status').textContent, 'Маршрут доступен');
   assert.equal(h.el('#line-value').textContent, '2 линия');
-  assert.equal(h.el('#line-confidence-label').textContent, 'Уверенность: 82%');
+  assert.equal(h.el('#line-confidence-label').textContent, 'Оценка маршрута: 82%');
   assert.equal(h.el('#manual-review').classList.contains('hidden'), false);
-  assert.equal(h.el('#similarity-status').textContent, 'Поиск: доступен');
+  assert.equal(h.el('#similarity-status').textContent, 'Поиск доступен');
   assert.equal(h.el('#similar-list').children.length, 1);
-  assert.match(h.el('#similar-list').children[0].innerHTML, /ID в индексе модели: model-17/);
-  assert.doesNotMatch(h.el('#similar-list').children[0].innerHTML, /Открыть исходную запись/);
+  assert.doesNotMatch(h.el('#similar-list').children[0].innerHTML, /ID в индексе модели/);
+  assert.match(h.el('#similar-list').children[0].innerHTML, /Открыть исходную запись/);
+  assert.match(h.el('#similar-list').children[0].innerHTML, /INC-17/);
+  assert.match(h.el('#similar-list').children[0].innerHTML, /data-record-id="a01b23456789cdef0123"/);
+  assert.match(h.el('#similar-list').children[0].innerHTML, /не вероятность/);
+  assert.match(h.el('#similar-list').children[0].innerHTML, /&lt;почта&gt;/);
 });
 
 test('analysis refreshes lazy integration statuses before showing the result', async () => {
@@ -212,10 +220,10 @@ test('analysis refreshes lazy integration statuses before showing the result', a
   assert.equal(h.requests[1].url, '/api/integrations');
   h.reply(1, { classification: 'model-missing', routing: 'ready', similarity: 'unavailable:inference-error', analytics: 'ready' });
   await pending;
-  assert.equal(h.el('#classification-status').textContent, 'Статус модели: отсутствует');
-  assert.equal(h.el('#routing-status').textContent, 'Маршрутизация: готова');
-  assert.equal(h.el('#similarity-status').textContent, 'Поиск: ошибка вычислений');
-  assert.match(h.el('#similar-list').innerHTML, /Поиск похожих обращений недоступен/);
+  assert.equal(h.el('#classification-status').textContent, 'Нужна ручная проверка');
+  assert.equal(h.el('#routing-status').textContent, 'Маршрут доступен');
+  assert.equal(h.el('#similarity-status').textContent, 'Поиск временно недоступен');
+  assert.match(h.el('#similar-list').innerHTML, /Поиск похожих обращений временно недоступен/);
   assert.match(h.el('#similar-list').innerHTML, /error-state/);
   assert.equal(button.disabled, false);
 });
@@ -228,9 +236,9 @@ test('a late integration response cannot overwrite a newer post-analysis status'
   await current;
   h.reply(0, { classification: 'uninitialized', routing: 'pending', similarity: 'pending', analytics: 'ready' });
   await old;
-  assert.equal(h.el('#classification-status').textContent, 'Статус модели: отсутствует');
-  assert.equal(h.el('#routing-status').textContent, 'Маршрутизация: готова');
-  assert.equal(h.el('#similarity-status').textContent, 'Поиск: доступен');
+  assert.equal(h.el('#classification-status').textContent, 'Нужна ручная проверка');
+  assert.equal(h.el('#routing-status').textContent, 'Маршрут доступен');
+  assert.equal(h.el('#similarity-status').textContent, 'Поиск доступен');
 });
 
 test('ready similarity search distinguishes a real empty result from an unavailable search', async () => {
@@ -241,7 +249,7 @@ test('ready similarity search distinguishes a real empty result from an unavaila
       routing: {support_line: "1 линия", confidence: .88, explanation: "Маршрут найден.", needs_manual_review: false},
       similar_appeals: [], manual_review_required: false
     })`);
-  assert.match(h.el('#similar-list').innerHTML, /Совпадений не найдено/);
+  assert.match(h.el('#similar-list').innerHTML, /Похожих обращений не найдено/);
   assert.doesNotMatch(h.el('#similar-list').innerHTML, /error-state/);
   assert.equal(h.el('#manual-review').classList.contains('hidden'), true);
 });
@@ -250,30 +258,103 @@ test('SLA analytics renders metrics, distributions, empty, loading, and error st
   const h = await harness();
   h.run(`renderAnalytics({
     status: "ready", total_appeals: 4, overdue_count: 2, overdue_share: .5,
-    mean_sla_h: 4.25, median_sla_h: 3,
+    mean_sla_h: 4.25, median_sla_h: 3, multiline_count: 2, high_clarifications_count: 1,
     category_distribution: [{value: "Категория A", count: 3, share: .75}],
     line_distribution: [{value: "2 линия", count: 2, share: .5}],
+    sla_breakdowns: {services: [{value: "Услуга", total_appeals: 4, mean_sla_h: 4.25, overdue_share: .5}]},
+    historical_sla_risk: {categories: [{value: "Категория A", overdue_sample_size: 30, overdue_share: .7, is_elevated_historical_risk: true}], lines: []},
     message: "Расчёт готов."
   })`);
   assert.equal(h.el('#kpi-total').textContent, '4');
   assert.equal(h.el('#kpi-overdue').textContent, '2 · 50%');
   assert.match(h.el('#kpi-mean-sla').textContent, /^4[,.]3 ч$/);
   assert.equal(h.el('#kpi-median-sla').textContent, '3 ч');
+  assert.equal(h.el('#kpi-multiline').textContent, '2');
+  assert.equal(h.el('#kpi-clarifications').textContent, '1');
   assert.match(h.el('#category-distribution').innerHTML, /Категория A/);
   assert.match(h.el('#line-distribution').innerHTML, /2 линия/);
+  assert.match(h.el('#sla-services').innerHTML, /Услуга/);
+  assert.match(h.el('#risk-categories').innerHTML, /70%/);
 
   h.run('setAnalyticsLoading()');
-  assert.equal(h.el('#kpi-status').textContent, 'Загрузка…');
+  assert.equal(h.el('#kpi-status').textContent, 'Обновляем…');
   assert.equal(h.el('#kpi-total').textContent, '—');
   assert.equal(h.el('#kpi-overdue').textContent, '—');
   assert.match(h.el('#category-distribution').innerHTML, /Загрузка/);
 
   h.run('renderAnalytics({status: "no-data", total_appeals: 0, overdue_share: null, message: "Загрузите Excel."})');
   assert.equal(h.el('#kpi-status').textContent, 'Нет данных');
-  assert.match(h.el('#category-distribution').innerHTML, /Загрузите данные/);
+  assert.match(h.el('#category-distribution').innerHTML, /Нет данных для выбранных условий/);
 
   h.run('renderAnalyticsError("Server unavailable")');
-  assert.equal(h.el('#kpi-status').textContent, 'Ошибка');
+  assert.equal(h.el('#kpi-status').textContent, 'Не удалось обновить');
   assert.match(h.el('#analytics-message').textContent, /Server unavailable/);
   assert.match(h.el('#category-distribution').innerHTML, /error-state/);
+});
+
+test('similar appeal button opens the SQLite record returned by analyze', async () => {
+  const h = await harness();
+  h.el('#similar-list').listeners.click({ target: {
+    closest: () => ({ dataset: { recordId: 'a01b23456789cdef0123' } }),
+  } });
+  assert.equal(h.requests[0].url, '/api/records/a01b23456789cdef0123');
+  h.reply(0, { _record_id: 'a01b23456789cdef0123', 'Номер запроса': 'INC-17', 'Результат работ': 'Доступ восстановлен' });
+  await flush();
+  assert.equal(h.el('#record-dialog').open, true);
+  assert.equal(h.el('#record-dialog-title').textContent, 'Обращение INC-17');
+});
+
+test('analytics sends every frontend filter with the API parameter names', async () => {
+  const h = await harness();
+  const filters = { date_from: '2025-01-01', date_to: '2025-01-31', service: 'Личный кабинет', category: 'Почта', priority: 'Высокий', line: '2 линия' };
+  for (const [name, value] of Object.entries(filters)) h.el(`#analytics-filters [name="${name}"]`).value = value;
+  const pending = h.run('loadAnalytics()');
+  assert.deepEqual(Object.fromEntries(new URL(h.requests[0].url, 'http://localhost').searchParams), filters);
+  h.reply(0, { status: 'ready', total_appeals: 12 });
+  await pending;
+  assert.equal(h.el('#kpi-total').textContent, '12');
+});
+
+test('late analytics success or failure cannot overwrite a newer filtered response', async () => {
+  for (const fail of [false, true]) {
+    const h = await harness();
+    const old = h.run('loadAnalytics(true)');
+    h.el('#analytics-filters [name="service"]').value = 'Новая услуга';
+    const current = h.run('loadAnalytics()');
+    h.reply(1, { status: 'ready', total_appeals: 7 });
+    await current;
+    if (fail) h.requests[0].reject(new Error('Old request failed'));
+    else h.reply(0, { status: 'ready', total_appeals: 999, sla_breakdowns: { services: [{ value: 'Старая услуга' }] } });
+    await old;
+    assert.equal(h.el('#kpi-total').textContent, '7');
+    assert.equal(h.el('#kpi-status').textContent, 'Данные полные');
+    assert.doesNotMatch(h.el('#notice').textContent, /Old request failed/);
+    assert.equal(h.run('state.analyticsOptionsInitialized'), true); // startup options stay intact
+  }
+});
+
+test('upload clears old analytics filters before loading options for the new Excel', async () => {
+  const h = await harness();
+  const service = h.el('#analytics-filters [name="service"]');
+  service.value = 'Услуга старого Excel';
+  let resets = 0;
+  h.el('#analytics-filters').reset = () => { resets++; service.value = ''; };
+  const pending = h.run('uploadDataset({name: "new.xlsx"})');
+  h.reply(0, { dataset_id: 'NEW', row_count: 1, columns: ['Тема'] });
+  await flush();
+  assert.equal(resets, 1);
+  assert.equal(h.requests[1].url, '/api/analytics/overview');
+  h.reply(1, { status: 'ready', total_appeals: 1, sla_breakdowns: { services: [{ value: 'Новая услуга' }] } });
+  h.reply(2, { items: [], total: 0 });
+  await pending;
+  assert.deepEqual(h.el('#service-filter').children.map(option => option.value), ['', 'Новая услуга']);
+});
+
+test('partial analytics uses category groups when original categories are unavailable', async () => {
+  const h = await harness();
+  h.run(`renderAnalytics({status: "partial-data", total_appeals: 2, sla_breakdowns: {
+    categories: [], category_groups: [{value: "Группа A", total_appeals: 2, mean_sla_h: 3, overdue_share: .5}]
+  }})`);
+  assert.match(h.el('#sla-categories').innerHTML, /Группа A/);
+  assert.match(h.el('#sla-categories').innerHTML, /50%/);
 });

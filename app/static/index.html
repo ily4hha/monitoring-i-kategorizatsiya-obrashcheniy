@@ -3,107 +3,111 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Контур обращений</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23153b63'/%3E%3Cpath d='M17 20h30v24H17z' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='m18 22 14 12 14-12' fill='none' stroke='white' stroke-width='4'/%3E%3C/svg%3E" />
+    <title>Центр обращений</title>
+    <meta name="description" content="Рабочее место Service Desk: рекомендации, история обращений и SLA-аналитика." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23234367%22/><text x=%2232%22 y=%2241%22 text-anchor=%22middle%22 font-size=%2226%22 fill=%22white%22>СД</text></svg>" />
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <p class="eyebrow">ПочтаТех × хакатон</p>
-        <h1>Контур обращений</h1>
-      </div>
-      <div class="dataset-control">
-        <span id="dataset-status" class="status-pill">Данные не загружены</span>
-        <input id="dataset-file" class="visually-hidden" type="file" accept=".xlsx,.xls" aria-label="Выберите Excel-файл для загрузки" />
-        <label class="upload-button" for="dataset-file">
-          Загрузить Excel
-        </label>
+      <a class="brand" href="#operator-view" aria-label="Центр обращений — на главную">
+        <span class="brand-mark" aria-hidden="true">СД</span>
+        <span><strong>Центр обращений</strong><small>Service Desk</small></span>
+      </a>
+      <div class="dataset-control" aria-label="Исторические данные">
+        <span id="dataset-status" class="dataset-status"><i aria-hidden="true"></i> История не загружена</span>
+        <input id="dataset-file" class="visually-hidden" type="file" accept=".xlsx,.xls" aria-label="Выберите Excel-файл с историей обращений" />
+        <label class="upload-button" for="dataset-file">Загрузить историю</label>
       </div>
     </header>
 
     <main class="shell">
-      <nav class="tabs" aria-label="Разделы приложения">
-        <button class="tab active" data-view="operator">Новое обращение</button>
-        <button class="tab" data-view="analytics">История и аналитика</button>
+      <nav class="tabs" aria-label="Разделы приложения" role="tablist">
+        <button id="operator-tab" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="operator-view" data-view="operator">Новое обращение</button>
+        <button id="history-tab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="history-view" data-view="history">История</button>
+        <button id="analytics-tab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="analytics-view" data-view="analytics">Аналитика</button>
       </nav>
-      <section id="notice" class="notice hidden" role="status"></section>
+      <section id="notice" class="notice hidden" role="status" aria-live="polite"></section>
 
-      <section id="operator-view" class="view active">
-        <div class="split-layout">
+      <section id="operator-view" class="view active" role="tabpanel" aria-labelledby="operator-tab">
+        <div class="page-heading">
+          <div>
+            <p class="section-label">Рабочее место оператора</p>
+            <h1>Новое обращение</h1>
+            <p>Опишите ситуацию — сервис предложит категорию, линию поддержки и покажет похожие случаи.</p>
+          </div>
+        </div>
+
+        <div class="operator-layout">
           <form id="appeal-form" class="panel form-panel">
             <div class="panel-heading">
-              <p class="section-label">Рабочее место оператора</p>
-              <h2>Разобрать новое обращение</h2>
-              <p>Используются только сведения, известные при регистрации.</p>
+              <span class="step-badge">1</span>
+              <div><h2>Данные обращения</h2><p>Поля со звёздочкой обязательны.</p></div>
             </div>
-            <label>
-              Тема обращения
-              <input name="subject" required maxlength="500" placeholder="Кратко опишите проблему" />
+            <label for="subject"><span class="field-label">Тема <span aria-hidden="true">*</span></span>
+              <input id="subject" name="subject" required maxlength="500" autocomplete="off" placeholder="Например, не удаётся войти в личный кабинет" />
             </label>
-            <label>
-              Текст обращения
-              <textarea name="description" required maxlength="20000" rows="8" placeholder="Полный текст обращения"></textarea>
+            <label for="description"><span class="field-label">Описание <span aria-hidden="true">*</span></span>
+              <textarea id="description" name="description" required maxlength="20000" rows="7" placeholder="Что произошло, когда началось и что уже пробовали"></textarea>
             </label>
             <div class="form-row">
-              <label>
-                Услуга
-                <input name="service" maxlength="500" placeholder="Если известна" />
+              <label for="service">Услуга
+                <input id="service" name="service" maxlength="500" autocomplete="off" placeholder="Например, Личный кабинет" />
               </label>
-              <label>
-                Компонент услуги
-                <input name="component" maxlength="500" placeholder="Если известен" />
+              <label for="component">Компонент
+                <input id="component" name="component" maxlength="500" autocomplete="off" placeholder="Например, Авторизация" />
               </label>
             </div>
-            <div class="form-row priority-row">
-              <label>
-                Приоритет
-                <select name="priority">
-                  <option value="">Не указан</option>
-                  <option>Низкий</option>
-                  <option>Средний</option>
-                  <option>Высокий</option>
-                  <option>Критический</option>
-                </select>
-              </label>
-            </div>
+            <label class="priority-field" for="priority">Приоритет
+              <select id="priority" name="priority">
+                <option value="">Не указан</option>
+                <option>Низкий</option>
+                <option>Средний</option>
+                <option>Высокий</option>
+                <option>Критический</option>
+              </select>
+            </label>
             <button class="primary" type="submit">Проанализировать</button>
           </form>
 
-          <section class="panel result-panel" aria-live="polite">
+          <section class="panel result-panel" aria-live="polite" aria-busy="false">
             <div class="panel-heading">
-              <p class="section-label">Результат</p>
-              <h2>Рекомендация сервису</h2>
-              <p id="result-placeholder">Заполните обращение, чтобы получить результат.</p>
+              <span class="step-badge">2</span>
+              <div><h2>Рекомендация</h2><p id="result-placeholder">Результат появится здесь после анализа обращения.</p></div>
             </div>
-            <div id="manual-review" class="warning hidden">
-              Нужна ручная проверка: уверенность недостаточна или модель ещё не подключена.
+            <div id="manual-review" class="review-alert hidden" role="alert">
+              <span class="review-icon" aria-hidden="true">!</span>
+              <div><strong>Нужна ручная проверка</strong><p id="manual-review-reason">Проверьте рекомендацию перед назначением.</p></div>
             </div>
             <div id="result-grid" class="result-grid hidden">
               <article class="result-card">
-                <span>Категория</span>
-                <span id="classification-status" class="model-status loading">Статус модели: проверяем…</span>
+                <div class="result-card-heading">
+                  <span>Категория</span>
+                  <span id="classification-status" class="model-status loading">Проверяем доступность</span>
+                </div>
                 <strong id="category-value">—</strong>
                 <div class="confidence" aria-hidden="true"><i id="category-confidence"></i></div>
-                <p id="category-confidence-label" class="confidence-label">Уверенность: —</p>
-                <p id="category-explanation"></p>
+                <p id="category-confidence-label" class="confidence-label">Оценка модели: —</p>
+                <div class="explanation"><span>Почему так</span><p id="category-explanation"></p></div>
                 <p id="category-limitation" class="limitation hidden"></p>
-                <span id="category-review" class="review-mark hidden">Нужна ручная проверка категории</span>
+                <span id="category-review" class="review-mark hidden">Проверьте категорию</span>
               </article>
               <article class="result-card">
-                <span>Линия поддержки</span>
-                <span id="routing-status" class="model-status loading">Маршрутизация: проверяем…</span>
+                <div class="result-card-heading">
+                  <span>Рекомендуемая линия</span>
+                  <span id="routing-status" class="model-status loading">Проверяем доступность</span>
+                </div>
                 <strong id="line-value">—</strong>
                 <div class="confidence" aria-hidden="true"><i id="line-confidence"></i></div>
-                <p id="line-confidence-label" class="confidence-label">Уверенность: —</p>
-                <p id="line-explanation"></p>
-                <span id="line-review" class="review-mark hidden">Нужна ручная проверка маршрута</span>
+                <p id="line-confidence-label" class="confidence-label">Оценка маршрута: —</p>
+                <div class="explanation"><span>Почему так</span><p id="line-explanation"></p></div>
+                <span id="line-review" class="review-mark hidden">Проверьте маршрут</span>
               </article>
             </div>
             <div id="similar-section" class="similar-section hidden">
               <div class="similar-heading">
-                <h3>Похожие обращения</h3>
-                <span id="similarity-status" class="model-status loading">Поиск: проверяем…</span>
+                <div><h3>Похожие обращения</h3><p>Исторические случаи с близким текстом.</p></div>
+                <span id="similarity-status" class="model-status loading">Проверяем доступность</span>
               </div>
               <div id="similar-list" class="similar-list"></div>
             </div>
@@ -111,56 +115,80 @@
         </div>
       </section>
 
-      <section id="analytics-view" class="view">
-        <div class="kpi-grid">
-          <article class="kpi"><span>Обращения</span><strong id="kpi-total">0</strong></article>
+      <section id="history-view" class="view" role="tabpanel" aria-labelledby="history-tab">
+        <div class="page-heading">
+          <div><p class="section-label">База знаний</p><h1>История</h1><p>Найдите обращение и откройте полную исходную запись.</p></div>
+          <label class="search-field" for="record-search"><span>Поиск по обращениям</span><input id="record-search" type="search" maxlength="500" placeholder="Номер, тема, услуга или текст" /></label>
+        </div>
+        <section class="panel records-panel" aria-live="polite">
+          <div class="records-heading"><div><h2>Исторические обращения</h2><p id="records-summary">Загрузите историю обращений, чтобы начать поиск.</p></div></div>
+          <div id="table-wrap" class="table-wrap"><div class="empty-state">История обращений пока не загружена.</div></div>
+          <div class="pagination" aria-label="Страницы истории">
+            <button id="prev-page" class="secondary" type="button" disabled>Назад</button>
+            <span id="page-label">0–0 из 0</span>
+            <button id="next-page" class="secondary" type="button" disabled>Далее</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="analytics-view" class="view" role="tabpanel" aria-labelledby="analytics-tab">
+        <div class="page-heading">
+          <div><p class="section-label">Контроль качества</p><h1>Аналитика</h1><p>Нагрузка, SLA и исторические зоны внимания по выбранному периоду.</p></div>
+          <span id="kpi-status" class="analytics-status">Нет данных</span>
+        </div>
+
+        <form id="analytics-filters" class="panel filter-panel">
+          <div class="filter-heading"><div><h2>Фильтры</h2><p>Все показатели ниже пересчитываются вместе.</p></div><button id="reset-analytics-filters" class="text-button" type="button">Сбросить</button></div>
+          <div class="filter-grid">
+            <fieldset class="period-fields"><legend>Период</legend><label for="date-from">С <input id="date-from" name="date_from" type="date" /></label><label for="date-to">По <input id="date-to" name="date_to" type="date" /></label></fieldset>
+            <label for="service-filter">Услуга<select id="service-filter" name="service"><option value="">Все услуги</option></select></label>
+            <label for="category-filter">Вид обращения<select id="category-filter" name="category"><option value="">Все виды</option></select></label>
+            <label for="priority-filter">Приоритет<select id="priority-filter" name="priority"><option value="">Все приоритеты</option></select></label>
+            <label for="line-filter">Линия<select id="line-filter" name="line"><option value="">Все линии</option></select></label>
+            <button class="primary filter-submit" type="submit">Применить</button>
+          </div>
+        </form>
+
+        <div class="kpi-grid" aria-label="Ключевые показатели">
+          <article class="kpi"><span>Всего обращений</span><strong id="kpi-total">—</strong></article>
           <article class="kpi"><span>Просрочено</span><strong id="kpi-overdue">—</strong></article>
           <article class="kpi"><span>Средний SLA</span><strong id="kpi-mean-sla">—</strong></article>
           <article class="kpi"><span>Медианный SLA</span><strong id="kpi-median-sla">—</strong></article>
-          <article class="kpi"><span>Статус аналитики</span><strong id="kpi-status">Нет данных</strong></article>
+          <article class="kpi"><span>Несколько линий</span><strong id="kpi-multiline">—</strong></article>
+          <article class="kpi"><span>Много уточнений</span><strong id="kpi-clarifications">—</strong></article>
         </div>
+
         <section class="panel analytics-panel" aria-live="polite">
-          <div class="panel-heading analytics-heading">
-            <p class="section-label">SLA-аналитика</p>
-            <h2>Распределения</h2>
-            <p id="analytics-message">Загрузите Excel, чтобы построить аналитику.</p>
-          </div>
+          <div class="analytics-heading"><div><p class="section-label">Обзор</p><h2>Распределение обращений</h2></div><p id="analytics-message">Загрузите историю обращений, чтобы построить аналитику.</p></div>
           <div class="distribution-grid">
-            <article>
-              <h3>По категориям</h3>
-              <div id="category-distribution" class="distribution-list"><div class="empty-state compact">Нет данных.</div></div>
-            </article>
-            <article>
-              <h3>По линиям поддержки</h3>
-              <div id="line-distribution" class="distribution-list"><div class="empty-state compact">Нет данных.</div></div>
-            </article>
+            <article><h3>По видам обращений</h3><div id="category-distribution" class="distribution-list"><div class="empty-state compact">Нет данных.</div></div></article>
+            <article><h3>По линиям поддержки</h3><div id="line-distribution" class="distribution-list"><div class="empty-state compact">Нет данных.</div></div></article>
           </div>
         </section>
-        <section class="panel records-panel">
-          <div class="records-heading">
-            <div>
-              <p class="section-label">Исходные данные</p>
-              <h2>История обращений</h2>
-            </div>
-            <input id="record-search" type="search" maxlength="500" placeholder="Поиск по загруженным строкам" aria-label="Поиск по загруженным строкам" />
+
+        <section class="panel analytics-panel">
+          <div class="analytics-heading"><div><p class="section-label">Срезы SLA</p><h2>Сравнение групп</h2></div><p>Сроки и доля просроченных обращений в каждом сегменте.</p></div>
+          <div class="breakdown-grid">
+            <article><h3>Услуги</h3><div id="sla-services" class="metric-table"></div></article>
+            <article><h3>Виды обращений</h3><div id="sla-categories" class="metric-table"></div></article>
+            <article><h3>Приоритеты</h3><div id="sla-priorities" class="metric-table"></div></article>
+            <article><h3>Линии поддержки</h3><div id="sla-lines" class="metric-table"></div></article>
           </div>
-          <div id="table-wrap" class="table-wrap">
-            <div class="empty-state">Загрузите Excel, чтобы увидеть историю.</div>
-          </div>
-          <div class="pagination">
-            <button id="prev-page" class="secondary" disabled>Назад</button>
-            <span id="page-label">0 записей</span>
-            <button id="next-page" class="secondary" disabled>Далее</button>
+        </section>
+
+        <section class="panel risk-panel">
+          <div class="analytics-heading"><div><p class="section-label">Исторический риск</p><h2>Где SLA нарушался чаще</h2></div><p id="risk-note">Риск рассчитан по прошлым обращениям и не является прогнозом будущих нарушений.</p></div>
+          <div class="risk-explainer"><strong>Важно:</strong> высокий показатель означает только то, что в выбранной исторической выборке просрочки встречались чаще среднего.</div>
+          <div class="risk-grid">
+            <article><h3>Виды обращений</h3><div id="risk-categories" class="risk-list"></div></article>
+            <article><h3>Линии поддержки</h3><div id="risk-lines" class="risk-list"></div></article>
           </div>
         </section>
       </section>
     </main>
 
-    <dialog id="record-dialog">
-      <div class="dialog-heading">
-        <h2>Исходная запись</h2>
-        <button id="close-dialog" aria-label="Закрыть">×</button>
-      </div>
+    <dialog id="record-dialog" aria-labelledby="record-dialog-title">
+      <div class="dialog-heading"><div><p class="section-label">История</p><h2 id="record-dialog-title">Исходная запись</h2></div><button id="close-dialog" type="button" aria-label="Закрыть карточку">×</button></div>
       <dl id="record-details"></dl>
     </dialog>
     <script src="/static/app.js" defer></script>

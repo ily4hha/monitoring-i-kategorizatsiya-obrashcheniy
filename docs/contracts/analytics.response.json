@@ -1,0 +1,200 @@
+{
+  "total_appeals": 1,
+  "overdue_count": 1,
+  "overdue_share": 1.0,
+  "mean_sla_h": 2.0,
+  "median_sla_h": 2.0,
+  "multiline_count": 0,
+  "high_clarifications_count": 1,
+  "status": "ready",
+  "kpis": {
+    "total_appeals": 1,
+    "overdue_count": 1,
+    "overdue_share": 1.0,
+    "mean_sla_h": 2.0,
+    "median_sla_h": 2.0,
+    "multiline_count": 0,
+    "high_clarifications_count": 1
+  },
+  "category_distribution": [
+    {
+      "value": "Проблема с авторизацией",
+      "count": 1,
+      "share": 1.0
+    }
+  ],
+  "line_distribution": [
+    {
+      "value": "2 линия",
+      "count": 1,
+      "share": 1.0
+    }
+  ],
+  "workload": {
+    "categories": [
+      {
+        "value": "Проблема с авторизацией",
+        "count": 1,
+        "share": 1.0
+      }
+    ],
+    "lines": [
+      {
+        "value": "2 линия",
+        "count": 1,
+        "share": 1.0
+      }
+    ]
+  },
+  "sla_breakdowns": {
+    "services": [
+      {
+        "total_appeals": 1,
+        "overdue_count": 1,
+        "overdue_share": 1.0,
+        "mean_sla_h": 2.0,
+        "median_sla_h": 2.0,
+        "multiline_count": 0,
+        "high_clarifications_count": 1,
+        "value": "Личный кабинет",
+        "count": 1,
+        "sla_sample_size": 1,
+        "overdue_sample_size": 1,
+        "multiline_share": 0.0,
+        "mean_total_work_h": 1.5,
+        "mean_total_react_h": 0.5
+      }
+    ],
+    "categories": [
+      {
+        "total_appeals": 1,
+        "overdue_count": 1,
+        "overdue_share": 1.0,
+        "mean_sla_h": 2.0,
+        "median_sla_h": 2.0,
+        "multiline_count": 0,
+        "high_clarifications_count": 1,
+        "value": "Проблема с авторизацией",
+        "count": 1,
+        "sla_sample_size": 1,
+        "overdue_sample_size": 1,
+        "multiline_share": 0.0,
+        "mean_total_work_h": 1.5,
+        "mean_total_react_h": 0.5
+      }
+    ],
+    "category_groups": [
+      {
+        "total_appeals": 1,
+        "overdue_count": 1,
+        "overdue_share": 1.0,
+        "mean_sla_h": 2.0,
+        "median_sla_h": 2.0,
+        "multiline_count": 0,
+        "high_clarifications_count": 1,
+        "value": "Проблема с авторизацией",
+        "count": 1,
+        "sla_sample_size": 1,
+        "overdue_sample_size": 1,
+        "multiline_share": 0.0,
+        "mean_total_work_h": 1.5,
+        "mean_total_react_h": 0.5
+      }
+    ],
+    "priorities": [
+      {
+        "total_appeals": 1,
+        "overdue_count": 1,
+        "overdue_share": 1.0,
+        "mean_sla_h": 2.0,
+        "median_sla_h": 2.0,
+        "multiline_count": 0,
+        "high_clarifications_count": 1,
+        "value": "Высокий",
+        "count": 1,
+        "sla_sample_size": 1,
+        "overdue_sample_size": 1,
+        "multiline_share": 0.0,
+        "mean_total_work_h": 1.5,
+        "mean_total_react_h": 0.5
+      }
+    ],
+    "lines": [
+      {
+        "total_appeals": 1,
+        "overdue_count": 1,
+        "overdue_share": 1.0,
+        "mean_sla_h": 2.0,
+        "median_sla_h": 2.0,
+        "multiline_count": 0,
+        "high_clarifications_count": 1,
+        "value": "2 линия",
+        "count": 1,
+        "sla_sample_size": 1,
+        "overdue_sample_size": 1,
+        "multiline_share": 0.0,
+        "mean_total_work_h": 1.5,
+        "mean_total_react_h": 0.5
+      }
+    ]
+  },
+  "historical_sla_risk": {
+    "definition": "Историческая доля просроченных обращений в группе относительно общей доли в отфильтрованной выборке. Это не прогноз.",
+    "minimum_group_size": 20,
+    "overall_overdue_share": 1.0,
+    "categories": [
+      {
+        "value": "Проблема с авторизацией",
+        "total_appeals": 1,
+        "overdue_sample_size": 1,
+        "overdue_count": 1,
+        "overdue_share": 1.0,
+        "overall_overdue_share": 1.0,
+        "overdue_share_delta": 0.0,
+        "overdue_risk_ratio": 1.0,
+        "minimum_group_size": 20,
+        "is_reliable": false,
+        "is_elevated_historical_risk": false,
+        "status": "insufficient-sample",
+        "reliability_message": "Недостаточно наблюдений: 1; минимальный порог — 20."
+      }
+    ],
+    "lines": [
+      {
+        "value": "2 линия",
+        "total_appeals": 1,
+        "overdue_sample_size": 1,
+        "overdue_count": 1,
+        "overdue_share": 1.0,
+        "overall_overdue_share": 1.0,
+        "overdue_share_delta": 0.0,
+        "overdue_risk_ratio": 1.0,
+        "minimum_group_size": 20,
+        "is_reliable": false,
+        "is_elevated_historical_risk": false,
+        "status": "insufficient-sample",
+        "reliability_message": "Недостаточно наблюдений: 1; минимальный порог — 20."
+      }
+    ]
+  },
+  "applied_filters": {
+    "date_from": "2025-01-02",
+    "date_to": "2025-01-02",
+    "service": "Личный кабинет",
+    "category": "Проблема с авторизацией",
+    "priority": "Высокий",
+    "line": "2 линия"
+  },
+  "sample_sizes": {
+    "source_records": 3,
+    "filtered_records": 1,
+    "sla_records": 1,
+    "overdue_records": 1,
+    "multiline_records": 1,
+    "clarification_records": 1
+  },
+  "source_size": 3,
+  "sample_size": 1,
+  "missing_columns": [],
+  "message": "Аналитика рассчитана по загруженному датасету."
+}

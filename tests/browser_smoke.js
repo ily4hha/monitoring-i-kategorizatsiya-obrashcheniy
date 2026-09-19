@@ -15,7 +15,7 @@ async (page) => {
   });
   assert(focus.id === 'dataset-file' && focus.visible && focus.width === '3px' && focus.style === 'solid', `File focus is invisible: ${JSON.stringify(focus)}`);
   await page.screenshot({ path: '/private/tmp/postcode-browser-focus.png' });
-  await page.getByRole('button', { name: 'История и аналитика' }).click();
+  await page.getByRole('tab', { name: 'История', exact: true }).click();
 
   let release;
   const gate = new Promise(resolve => { release = resolve; });
@@ -41,7 +41,7 @@ async (page) => {
   await page.locator('.record-link').first().click();
   await page.locator('#record-dialog').waitFor({ state: 'visible' });
   const fields = await page.locator('#record-details dt').allTextContents();
-  assert(fields.includes('_customer') && fields.includes('*custom'), 'User columns are hidden');
+  assert(fields.includes('Customer') && fields.includes('Custom'), 'User columns are hidden');
   assert(!fields.some(field => ['_record_id', '_sheet', '_source_row'].includes(field)), 'Metadata is visible');
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
 

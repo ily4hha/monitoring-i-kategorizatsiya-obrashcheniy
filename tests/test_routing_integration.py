@@ -1,6 +1,8 @@
+from io import BytesIO
 from unittest.mock import Mock
 
 import joblib
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 from sklearn.exceptions import InconsistentVersionWarning
@@ -14,7 +16,40 @@ from app.services.integrations import AnalysisService
 APPEAL = {"subject": "Ошибка авторизации", "description": "Не могу войти в личный кабинет, пароль не работает"}
 
 
-def test_real_model_loaded_once_at_startup_and_shared(tmp_path, monkeypatch):
+def history_workbook(rows: list[dict] | None = None) -> bytes:
+    rows = rows or [
+        {
+            "Номер запроса": "INC-100",
+            "Описание 2": "Ошибка авторизации в личном кабинете, пароль не работает",
+            "Услуга": "Личный кабинет",
+            "Компонент услуги 1 уровня": "Авторизация",
+            "Вид запроса": "Инцидент",
+            "Кем решен (группа)": "2 линия",
+            "Результат работ": "Пароль сброшен, доступ восстановлен",
+        },
+        {
+            "Номер запроса": "INC-200",
+            "Описание 2": "Не печатается почтовая накладная",
+            "Услуга": "Партионный приём",
+            "Компонент услуги 1 уровня": "Печать",
+            "Вид запроса": "Проблема",
+            "Кем решен (группа)": "1 линия",
+            "Результат работ": "Перезапущена очередь печати",
+        },
+    ]
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        pd.DataFrame(rows).to_excel(writer, sheet_name="Обращения", index=False)
+    return output.getvalue()
+
+
+def upload_history(client, content: bytes, name: str = "history.xlsx") -> dict:
+    response = client.post("/api/datasets", files={"file": (name, content)})
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_real_model_loaded_once_and_similarity_uses_uploaded_dataset(tmp_path, monkeypatch):
     classifier = Mock(status="model-missing")
     classifier.predict.return_value = CategoryPrediction(
         category=None, confidence=0, explanation="Модель отсутствует.", needs_manual_review=True,
@@ -30,29 +65,45 @@ def test_real_model_loaded_once_at_startup_and_shared(tmp_path, monkeypatch):
         service = app.state.analysis_service
         model = service.router.runtime.assistant
         assert model is not None
-        assert model is service.similarity.runtime.assistant
         statuses = client.get("/api/integrations").json()
         assert statuses == dict(classification="model-missing", routing="ready", similarity="ready", analytics="ready")
         expected = model.recommend_line(routing.appeal_text(AppealInput(**APPEAL)))
-        expected_hits = model.find_similar(routing.appeal_text(AppealInput(**APPEAL)), limit=5)
-        assert expected["line"] is not None and expected_hits
+        assert expected["line"] is not None
+        assert client.post("/api/appeals/analyze", json=APPEAL).json()["similar_appeals"] == []
+        dataset = upload_history(client, history_workbook())
+        active_ids = {
+            item["_record_id"]
+            for item in client.get(f"/api/datasets/{dataset['dataset_id']}/records").json()["items"]
+        }
         for _ in range(3):
-            response = client.post("/api/appeals/analyze", json=APPEAL)
+            response = client.post("/api/appeals/analyze", json={
+                **APPEAL, "service": "Личный кабинет", "component": "Авторизация",
+            })
             assert response.status_code == 200
             result = response.json()
             assert result["routing"]["support_line"] == expected["line"]
             assert result["routing"]["confidence"] == pytest.approx(expected["confidence"])
             assert result["routing"]["needs_manual_review"] == expected["needs_review"]
             assert expected["explanation"] in result["routing"]["explanation"]
-            assert result["similar_appeals"] == [dict(
-                record_id=str(hit["id"]), score=pytest.approx(hit["similarity"]),
-                category=hit["category"], support_line=hit["line"], resolution=hit["result"],
-            ) for hit in expected_hits]
+            assert result["similar_appeals"]
+            hit = result["similar_appeals"][0]
+            assert hit["record_id"] in active_ids
+            assert hit["appeal_number"] == "INC-100"
+            assert hit["score_kind"] == "textual_similarity"
+            assert "не вероятность" in hit["score_description"]
+            assert hit["category"] == "Инцидент"
+            assert hit["support_line"] == "2 линия"
+            assert hit["resolution"] == "Пароль сброшен, доступ восстановлен"
+            assert "Совпали значимые термины" in hit["explanation"]
+            assert client.get(f"/api/records/{hit['record_id']}").status_code == 200
         assert isinstance(service.router.recommend(AppealInput(**APPEAL), None), RoutingPrediction)
         for limit in [1, 5, 100]:
             hits = service.similarity.search(AppealInput(**APPEAL), limit)
             assert 0 < len(hits) <= min(limit, 5)
             assert all(isinstance(hit, SimilarAppeal) for hit in hits)
+        high_priority = service.similarity.search(AppealInput(**APPEAL, priority="Высокий"))
+        low_priority = service.similarity.search(AppealInput(**APPEAL, priority="Низкий"))
+        assert high_priority == low_priority
         assert service.similarity.search(AppealInput(**APPEAL), 0) == []
         assert service.similarity.search(AppealInput(**APPEAL), -1) == []
         unknown = client.post("/api/appeals/analyze", json={"subject": "zzzxqvv", "description": "zzzxqvv"}).json()
@@ -94,7 +145,8 @@ def test_artifact_fallback(tmp_path, monkeypatch, artifact, reason):
             assert data["similar_appeals"] == []
             assert data["manual_review_required"] is True
         status = client.get("/api/integrations").json()
-        assert status["routing"] == status["similarity"] == f"unavailable:{reason}"
+        assert status["routing"] == f"unavailable:{reason}"
+        assert status["similarity"] == "ready"
         assert client.get("/api/health").status_code == 200
     loader.assert_called_once_with()
 
@@ -111,12 +163,11 @@ def test_sklearn_version_warning_is_incompatible(tmp_path, monkeypatch):
         assert client.get("/api/integrations").json()["routing"] == "unavailable:model-incompatible"
 
 
-@pytest.mark.parametrize("method", ["recommend_line", "find_similar"])
-def test_inference_failure_degrades_without_reloading(tmp_path, monkeypatch, method):
+def test_routing_inference_failure_degrades_without_reloading(tmp_path, monkeypatch):
     with TestClient(create_app(tmp_path / "runtime")) as client:
         runtime = client.app.state.analysis_service.router.runtime
         assert runtime.status == "ready"
-        monkeypatch.setattr(runtime.assistant, method, Mock(side_effect=ValueError("broken inference")))
+        monkeypatch.setattr(runtime.assistant, "recommend_line", Mock(side_effect=ValueError("broken inference")))
         response = client.post("/api/appeals/analyze", json=APPEAL)
         assert response.status_code == 200
         assert response.json()["similar_appeals"] == []
@@ -126,6 +177,81 @@ def test_inference_failure_degrades_without_reloading(tmp_path, monkeypatch, met
         assert result["routing"]["support_line"] is None
         assert result["routing"]["confidence"] == 0
         assert result["manual_review_required"] is True
+
+
+def test_similarity_index_rebuilds_for_reupload_and_returns_only_active_ids(tmp_path):
+    first_content = history_workbook()
+    second_content = history_workbook([{
+        "Номер запроса": "MAIL-1",
+        "Описание 2": "Письмо застряло в очереди и не доставляется",
+        "Услуга": "Корпоративная почта",
+        "Компонент услуги 1 уровня": "Доставка",
+        "Вид запроса": "Инцидент почты",
+        "Кем решен (группа)": "3 линия",
+        "Результат работ": "Очередь очищена, письмо доставлено",
+    }])
+    with TestClient(create_app(tmp_path / "runtime")) as client:
+        first = upload_history(client, first_content, "first.xlsx")
+        first_ids = {
+            item["_record_id"]
+            for item in client.get(f"/api/datasets/{first['dataset_id']}/records").json()["items"]
+        }
+        second = upload_history(client, second_content, "second.xlsx")
+        second_ids = {
+            item["_record_id"]
+            for item in client.get(f"/api/datasets/{second['dataset_id']}/records").json()["items"]
+        }
+        response = client.post("/api/appeals/analyze", json={
+            "subject": "Проблема доставки письма",
+            "description": "Письмо застряло в очереди",
+            "service": "Корпоративная почта",
+            "component": "Доставка",
+        }).json()
+        assert response["similar_appeals"]
+        assert {hit["record_id"] for hit in response["similar_appeals"]} <= second_ids
+        assert not ({hit["record_id"] for hit in response["similar_appeals"]} & first_ids)
+
+        # Re-uploading identical bytes reactivates the older dataset and rebuilds the index.
+        repeated = upload_history(client, first_content, "renamed.xlsx")
+        assert repeated["dataset_id"] == first["dataset_id"]
+        response = client.post("/api/appeals/analyze", json=APPEAL).json()
+        assert response["similar_appeals"]
+        assert {hit["record_id"] for hit in response["similar_appeals"]} <= first_ids
+        assert all(client.get(f"/api/records/{hit['record_id']}").status_code == 200
+                   for hit in response["similar_appeals"])
+
+    # The active dataset is indexed again on application startup.
+    with TestClient(create_app(tmp_path / "runtime")) as restarted:
+        hits = restarted.post("/api/appeals/analyze", json=APPEAL).json()["similar_appeals"]
+        assert hits and {hit["record_id"] for hit in hits} <= first_ids
+
+
+def test_similarity_empty_text_no_dataset_no_results_and_limit(tmp_path):
+    with TestClient(create_app(tmp_path / "runtime")) as client:
+        service = client.app.state.analysis_service.similarity
+        assert service.search(AppealInput(
+            subject=" ", description=" ", service="Личный кабинет", component="Авторизация",
+        )) == []
+        assert client.post("/api/appeals/analyze", json=APPEAL).json()["similar_appeals"] == []
+
+        rows = [
+            {
+                "Номер запроса": f"INC-{index}",
+                "Описание 2": "общая ошибка авторизации пароль кабинет",
+                "Услуга": "Личный кабинет",
+                "Компонент услуги 1 уровня": "Авторизация",
+                "Вид запроса": "Инцидент",
+                "Кем решен (группа)": "1 линия",
+                "Результат работ": "Доступ восстановлен",
+            }
+            for index in range(7)
+        ]
+        upload_history(client, history_workbook(rows))
+        assert len(service.search(AppealInput(**APPEAL), limit=100)) == 5
+        no_results = client.post("/api/appeals/analyze", json={
+            "subject": "zzzxqvv", "description": "zzzxqvv",
+        }).json()
+        assert no_results["similar_appeals"] == []
 
 
 def test_model_review_flag_preserved_with_confident_classifier():

@@ -1,10 +1,3 @@
-# Optional training/inference environment: Python 3.11; not required for fallback.
-# Deployment must use the same versions recorded in the artifact manifest.
-pandas==2.3.2
-numpy==2.2.6
-scikit-learn==1.7.2
-sentence-transformers==5.1.1
-transformers==4.56.2
-torch==2.8.0
-openpyxl==3.1.5
-joblib==1.5.2
+# Same lightweight environment as application runtime. No second venv or model cache.
+# Install from the repository root:
+-e .[dev]

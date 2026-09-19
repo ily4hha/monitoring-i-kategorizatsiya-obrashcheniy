@@ -2,11 +2,12 @@
 
 import re
 
-FEATURE_VERSION = "description-service-component-v1"
-EMBEDDER_NAME = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
-EMBEDDING_DIM = 768
-DEFAULT_THRESHOLD = 0.25
+FEATURE_VERSION = "description-service-component-tfidf-v2"
+# Fixed before holdout evaluation, not selected using test labels.
+DEFAULT_THRESHOLD = 0.70
 OTHER_CATEGORY = "Прочее / Неопределено"
+MIN_KNOWN_WORDS = 2
+STOP_WORDS = "и в во на с со по за из для от до к ко у о об а но или не нет это как что при все вы мы я он она они num url неуказано".split()
 
 
 def clean_text(text: str | None) -> str:
@@ -23,8 +24,8 @@ def clean_text(text: str | None) -> str:
 
 
 def metadata_text(value: str | None) -> str:
-    return value.strip() if isinstance(value, str) and value.strip() else "Не указано"
+    return clean_text(value)
 
 
 def build_features(text: str | None, service: str | None = None, component: str | None = None) -> str:
-    return f"{clean_text(text)} | {metadata_text(service)} {metadata_text(component)}"
+    return f"{clean_text(text)} | {metadata_text(service)} | {metadata_text(component)}"

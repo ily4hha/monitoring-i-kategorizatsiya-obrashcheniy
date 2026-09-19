@@ -1,4 +1,4 @@
-"""Adapter for the optional categorization artifact; constructor performs no ML work."""
+"""Adapter for the bundled offline categorization model and manual fallback."""
 from app.models import AppealInput, CategoryPrediction
 
 
@@ -6,6 +6,7 @@ class ClassifierAdapter:
     def __init__(self, categorizer=None):
         if categorizer is not None:
             self.categorizer = categorizer
+            self.categorizer.start()
             return
         try:
             # Keep ``app`` importable as a standalone package. The integration module is
@@ -15,6 +16,7 @@ class ClassifierAdapter:
             self.categorizer = None
         else:
             self.categorizer = TicketCategorizer()
+            self.categorizer.start()
 
     @property
     def status(self):
@@ -25,16 +27,15 @@ class ClassifierAdapter:
             return CategoryPrediction(
                 category=None,
                 confidence=0,
-                explanation="Модуль и модель категоризации отсутствуют. Требуется отдельное обучение.",
+                explanation="Модуль категоризации отсутствует. Восстановите поставляемый модуль и артефакт; требуется ручной разбор.",
                 needs_manual_review=True,
                 limitation="Категоризация недоступна: model-missing",
             )
-        # Notebook training uses description, service, component. Subject/priority are not features.
+        # Only registration-time description, service and component are model features.
         result = self.categorizer.predict(appeal.description, appeal.service, appeal.component)
         return CategoryPrediction(
             category=result["category"] if result["is_reliable"] else None,
             confidence=result["confidence"], explanation=result["explanation"],
             needs_manual_review=not result["is_reliable"],
-            limitation=("Категоризация недоступна: " + self.status
-                        if self.status != "ready" else None),
+            limitation=result.get("limitation"),
         )

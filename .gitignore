@@ -10,6 +10,7 @@ __pycache__/
 *.egg-info/
 .playwright-mcp/
 artifacts/
+*-final.jpg
 runtime/
 uploads/
 *.sqlite

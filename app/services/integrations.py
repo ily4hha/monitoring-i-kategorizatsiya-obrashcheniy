@@ -25,6 +25,8 @@ class Router(Protocol):
 class SimilaritySearch(Protocol):
     def search(self, appeal: AppealInput, limit: int = 5) -> list[SimilarAppeal]: ...
 
+    def rebuild(self) -> None: ...
+
 
 class PendingRouter:
     def recommend(self, appeal: AppealInput, category: str | None) -> RoutingPrediction:
@@ -38,6 +40,9 @@ class PendingRouter:
 class PendingSimilaritySearch:
     def search(self, appeal: AppealInput, limit: int = 5) -> list[SimilarAppeal]:
         return []
+
+    def rebuild(self) -> None:
+        return None
 
 
 class AnalysisService:
@@ -67,6 +72,11 @@ class AnalysisService:
                 or routing.support_line is None
             ),
         )
+
+    def refresh_similarity_index(self) -> None:
+        rebuild = getattr(self.similarity, "rebuild", None)
+        if rebuild is not None:
+            rebuild()
 
     def status(self) -> IntegrationStatus:
         return IntegrationStatus(

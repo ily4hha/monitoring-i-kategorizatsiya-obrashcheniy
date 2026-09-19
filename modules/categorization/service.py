@@ -1,4 +1,4 @@
-"""Lazy, offline inference. Training is available only in train_categorizer.py."""
+"""Thread-safe, offline inference from a bundled TF-IDF/linear artifact."""
 from __future__ import annotations
 
 import json
@@ -7,13 +7,10 @@ from importlib.metadata import version
 from pathlib import Path
 from threading import Lock
 
-from .features import (
-    DEFAULT_THRESHOLD, EMBEDDER_NAME, EMBEDDING_DIM, FEATURE_VERSION,
-    OTHER_CATEGORY, build_features, clean_text,
-)
+from .features import FEATURE_VERSION, MIN_KNOWN_WORDS, build_features, clean_text
 
 MODEL_PATH = Path(__file__).resolve().parent / "model.pkl"
-RUNTIME_PACKAGES = ("scikit-learn", "joblib", "numpy", "sentence-transformers", "transformers", "torch")
+RUNTIME_PACKAGES = ("scikit-learn", "joblib", "numpy", "scipy")
 logger = logging.getLogger(__name__)
 
 
@@ -21,25 +18,14 @@ def package_versions():
     return {name: version(name) for name in RUNTIME_PACKAGES}
 
 
-def load_embedder(revision: str):
-    # A pinned snapshot must already be in the local HF cache. Never download in HTTP.
-    from sentence_transformers import SentenceTransformer
-
-    return SentenceTransformer(
-        EMBEDDER_NAME, revision=revision, local_files_only=True,
-        trust_remote_code=False, device="cpu",
-    )
-
-
 class TicketCategorizer:
-    def __init__(self, model_path=MODEL_PATH, threshold=DEFAULT_THRESHOLD):
-        if not 0 <= threshold <= 1:
+    def __init__(self, model_path=MODEL_PATH, threshold=None):
+        if threshold is not None and not 0 <= threshold <= 1:
             raise ValueError("threshold must be between 0 and 1")
         self.model_path = Path(model_path)
         self.metadata_path = self.model_path.with_suffix(".json")
         self.threshold = threshold
         self.model = None
-        self.embedder = None
         if not self.model_path.is_file():
             self.status = "model-missing"
         elif not self.metadata_path.is_file():
@@ -49,6 +35,10 @@ class TicketCategorizer:
         self._lock = Lock()
 
     clean_text = staticmethod(clean_text)
+
+    def start(self):
+        with self._lock:
+            self._initialize()
 
     def _initialize(self):
         if self.status != "uninitialized":
@@ -62,89 +52,108 @@ class TicketCategorizer:
         try:
             import joblib
             import warnings
+            from sklearn.calibration import CalibratedClassifierCV
             from sklearn.exceptions import InconsistentVersionWarning
+            from .model import fitted_pipeline
 
             metadata = json.loads(self.metadata_path.read_text(encoding="utf-8"))
-            # Only an operator-provided, trusted local artifact may be loaded.
+            # Only operator-controlled local artifacts; never accept paths from HTTP/uploads.
             with warnings.catch_warnings():
                 warnings.simplefilter("error", InconsistentVersionWarning)
                 bundle = joblib.load(self.model_path)
-            if not isinstance(bundle, dict) or bundle.get("format_version") != 1:
-                raise ValueError("Legacy artifact has no feature/version manifest; retrain it")
-            bundled_metadata = {key: value for key, value in bundle.items() if key != "model"}
-            if metadata != bundled_metadata:
-                raise ValueError("External model metadata does not match the artifact")
-            if bundle["feature_version"] != FEATURE_VERSION or bundle["embedder"] != EMBEDDER_NAME:
+            if not isinstance(bundle, dict) or bundle.get("format_version") != 2:
+                raise ValueError("Unsupported categorization artifact")
+            if metadata != {key: value for key, value in bundle.items() if key != "model"}:
+                raise ValueError("External metadata does not match the artifact")
+            if bundle["feature_version"] != FEATURE_VERSION:
                 raise ValueError("Incompatible feature contract")
-            if bundle["embedding_dim"] != EMBEDDING_DIM or bundle["versions"] != package_versions():
-                raise ValueError("Incompatible dimensions or library versions")
-            revision = bundle["embedder_revision"]
-            import re
-            if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
-                raise ValueError("Embedder revision must be an immutable commit SHA")
+            # sklearn's serialized estimator contract is pinned in pyproject.toml.
+            # Record (but do not require exact patch versions of) numpy/scipy/Python.
+            if bundle["versions"]["scikit-learn"] != version("scikit-learn"):
+                raise ValueError("Incompatible scikit-learn version")
             model = bundle["model"]
-            if model.n_features_in_ != EMBEDDING_DIM or not callable(model.predict_proba):
+            if not isinstance(model, CalibratedClassifierCV) or model.ensemble is not False:
                 raise ValueError("Incompatible classifier")
             if len(model.classes_) < 2 or list(model.classes_) != bundle["classes"]:
                 raise ValueError("Incompatible classes")
+            from .features import OTHER_CATEGORY
+            if set(model.classes_) != set(bundle["top_categories"]) | ({OTHER_CATEGORY} if OTHER_CATEGORY in model.classes_ else set()):
+                raise ValueError("Invalid top-category mapping")
+            if (not 0 <= bundle["threshold"] <= 1 or bundle["min_known_words"] != MIN_KNOWN_WORDS
+                    or not 1 <= len(bundle["top_categories"]) <= 15):
+                raise ValueError("Invalid review policy")
+            pipeline = fitted_pipeline(model)
+            if set(dict(pipeline.named_steps["features"].transformer_list)) != {"word", "char"}:
+                raise ValueError("Invalid feature pipeline")
+            # A small offline probe catches incompatible scipy/numpy/artifacts at startup.
+            self._validate_probabilities(model.predict_proba([build_features("проверка модели")]), model)
+            self.model = model
+            if self.threshold is None:
+                self.threshold = bundle["threshold"]
+            self.status = "ready"
         except Exception:
             logger.exception("Categorization artifact cannot be loaded")
             self.status = "model-incompatible"
-            return
-        try:
-            embedder = load_embedder(revision)
-            if embedder.get_sentence_embedding_dimension() != EMBEDDING_DIM:
-                raise ValueError("Incompatible embedder dimension")
-        except Exception:
-            logger.exception("Local categorization embedder unavailable")
-            self.status = "embedder-unavailable"
-            return
-        self.model, self.embedder = model, embedder
-        self.status = "ready"
+
+    @staticmethod
+    def _validate_probabilities(probabilities, model):
+        import numpy as np
+        proba = np.asarray(probabilities)
+        if (proba.shape != (1, len(model.classes_)) or not np.isfinite(proba).all()
+                or (proba < 0).any() or (proba > 1).any() or not np.isclose(proba.sum(), 1)):
+            raise ValueError("Invalid classifier probabilities")
+        return proba
 
     def _fallback(self):
         reasons = {
-            "model-missing": "Модель категоризации отсутствует. Требуется отдельное обучение.",
+            "model-missing": "Поставляемый файл модели категоризации отсутствует.",
             "metadata-missing": "Метаданные модели категоризации отсутствуют.",
-            "model-incompatible": "Артефакт категоризации или версии библиотек несовместимы.",
-            "embedder-unavailable": "Локальные веса SentenceTransformer недоступны или несовместимы.",
-            "inference-error": "Ошибка категоризации. Требуется ручной разбор.",
+            "model-incompatible": "Артефакт категоризации повреждён или несовместим с runtime.",
+            "inference-error": "Модель категоризации не смогла обработать обращение.",
         }
-        return dict(category=None, confidence=0.0, is_reliable=False,
-                    explanation=reasons.get(self.status, "Категоризация недоступна."))
+        reason = reasons.get(self.status, "Категоризация недоступна.")
+        return dict(category=None, confidence=0.0, is_reliable=False, needs_manual_review=True,
+                    explanation=reason + " Требуется ручной разбор.",
+                    limitation=f"Категоризация недоступна: {self.status}. {reason}")
 
     def predict(self, text, service=None, component=None):
-        # Serialize first load and inference so concurrent failures cannot expose stale state.
         with self._lock:
             self._initialize()
             if self.status != "ready":
                 return self._fallback()
             try:
-                import numpy as np
-
-                embedding = self.embedder.encode(
-                    [build_features(text, service, component)],
-                    convert_to_numpy=True, normalize_embeddings=False, show_progress_bar=False,
-                )
-                if embedding.shape != (1, EMBEDDING_DIM) or not np.isfinite(embedding).all():
-                    raise ValueError("Invalid embedding")
-                proba = np.asarray(self.model.predict_proba(embedding))
-                if (proba.shape != (1, len(self.model.classes_)) or not np.isfinite(proba).all()
-                        or (proba < 0).any() or (proba > 1).any()
-                        or not np.isclose(proba.sum(), 1)):
-                    raise ValueError("Invalid classifier probabilities")
+                from .model import explain_terms, known_word_counts, review_reason
+                features = build_features(text, service, component)
+                count = int(known_word_counts(self.model, [features])[0])
+                if count < MIN_KNOWN_WORDS:
+                    return dict(category=None, confidence=0.0, is_reliable=False, needs_manual_review=True,
+                                explanation="Недостаточно известных модели слов в описании, услуге и компоненте. Требуется ручной разбор.",
+                                limitation="insufficient-features: нужно хотя бы два разных содержательных слова из словаря обучения.")
+                proba = self._validate_probabilities(self.model.predict_proba([features]), self.model)
                 index = int(proba[0].argmax())
                 confidence = float(proba[0, index])
                 category = str(self.model.classes_[index])
-                reliable = confidence >= self.threshold and category not in {OTHER_CATEGORY, "Прочее"}
-                return dict(
-                    category=category if reliable else None, confidence=confidence,
-                    is_reliable=reliable,
-                    explanation=f"Уверенность модели: {confidence:.2f}. Порог: {self.threshold}."
-                    + (" Требуется ручной разбор." if not reliable else ""),
-                )
+                reason = review_reason(category, confidence, count, self.threshold)
+                terms = explain_terms(self.model, features, index)
+                explanation = (f"Кандидат: {category}. Оценка модели: {confidence:.2f}; "
+                               f"порог автоматического ответа: {self.threshold:.2f}. "
+                               "Использованы описание, услуга и компонент. ")
+                if terms:
+                    explanation += "Положительный вклад слов в линейную оценку: " + ", ".join(terms) + ". "
+                explanation += "Оценка модели не гарантирует правильность категории."
+                limitations = {
+                    "outside-top-15": "Модель предполагает категорию вне top-15; требуется ручной разбор.",
+                    "ambiguous-category": "Кандидат «Прочее» слишком общий; требуется ручной разбор.",
+                    "low-confidence": "Оценка модели ниже порога; требуется ручной разбор.",
+                }
+                limitation = f"{reason}: {limitations[reason]}" if reason else None
+                if reason:
+                    explanation += " " + limitations[reason]
+                return dict(category=category if reason is None else None, confidence=confidence,
+                            is_reliable=reason is None, needs_manual_review=reason is not None,
+                            explanation=explanation, limitation=limitation)
             except Exception:
                 logger.exception("Categorization inference failed")
                 self.status = "inference-error"
-                self.model = self.embedder = None
+                self.model = None
                 return self._fallback()

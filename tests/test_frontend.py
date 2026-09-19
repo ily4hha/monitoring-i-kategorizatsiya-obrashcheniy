@@ -41,7 +41,26 @@ def test_integrated_result_and_sla_elements_are_present():
         "classification-status", "category-confidence-label", "category-limitation",
         "category-review", "routing-status", "line-confidence-label", "line-review",
         "similarity-status", "kpi-mean-sla",
-        "kpi-median-sla", "analytics-message", "category-distribution", "line-distribution",
+        "kpi-median-sla", "kpi-multiline", "kpi-clarifications", "analytics-message",
+        "category-distribution", "line-distribution", "sla-services", "sla-categories",
+        "sla-priorities", "sla-lines", "risk-categories", "risk-lines",
     ):
         assert f'id="{element_id}"' in html
     assert 'name="component"' in html
+
+
+def test_three_sections_filters_and_human_language_are_present():
+    html = (ROOT / "app/static/index.html").read_text()
+    script = (ROOT / "app/static/app.js").read_text()
+    for view in ("operator-view", "history-view", "analytics-view"):
+        assert f'id="{view}"' in html
+    assert 'id="operator-view" class="view active"' in html
+    assert '<button class="primary" type="submit">Проанализировать</button>' in html
+    assert '<link rel="icon" href="data:image/svg+xml,' in html
+    for field in ("date_from", "date_to", "service", "category", "priority", "line"):
+        assert f'name="{field}"' in html
+    assert "Открыть исходную запись" in script
+    assert "не является прогнозом" in html
+    visible_copy = html.lower()
+    for internal_term in ("final.csv", "partial-data", "model-incompatible", "fact_sla_h", "is_overdue"):
+        assert internal_term not in visible_copy
