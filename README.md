@@ -4,12 +4,12 @@ A local service for importing historical appeals from Excel, analyzing new appea
 
 ## Team and Contributions
 
-The names below are temporary placeholders. `Participant 1`–`Participant 5` can later be replaced with the team members' GitHub usernames.
+The remaining participant labels are temporary placeholders and can later be replaced with the team members' GitHub usernames.
 
 - **Participant 1** — appeal categorization: feature engineering, model training and evaluation across the 15 primary categories, confidence calibration, manual-review fallback, ML artifact packaging, and metrics documentation.
-- **Participant 2** — routing and similar-appeal search: support-line recommendation model, TF-IDF retrieval of similar cases, validation datasets, metrics, reports, and integration materials.
+- **[@fullfels](https://github.com/fullfels) (Participant 2)** — routing and similar-appeal search: support-line recommendation model, TF-IDF retrieval of similar cases, validation datasets, metrics, reports, and integration materials.
 - **Participant 3** — data preparation and SLA analytics: cleaning and normalizing 1,931 appeals, maintaining the data dictionary, calculating durations and overdue cases, and validating data quality, anomalies, and multi-line cases.
-- **Participant 4** — application and integration: FastAPI service, Excel import, SQLite storage, API contracts, operator interface, integration of categorization, routing, and analytics modules, plus integration and frontend tests.
+- **[@ily4hha](https://github.com/ily4hha) (Participant 4)** — application and integration: FastAPI service, Excel import, SQLite storage, API contracts, operator interface, integration of categorization, routing, and analytics modules, plus integration and frontend tests.
 - **Participant 5** — presentation and demonstration: project presentation, quality report, demonstration script, and video walkthrough of the completed service.
 
 ## What the Service Does
