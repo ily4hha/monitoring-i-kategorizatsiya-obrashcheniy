@@ -21,10 +21,10 @@
 
 ## Установка
 
-Одна последовательность для чистого клонирования ветки:
+Одна последовательность для чистого клонирования проекта:
 
 ```bash
-git clone --branch feature/final-integration --single-branch https://git.codenrock.com/codenrock/khakaton-postcode-challenge-ot-pochtatekha/b26-dsai/monitoring-i-kategorizatsiya-obrashcheniy.git
+git clone https://github.com/ily4hha/monitoring-i-kategorizatsiya-obrashcheniy.git
 cd monitoring-i-kategorizatsiya-obrashcheniy
 python3 -m venv .venv
 source .venv/bin/activate
@@ -171,6 +171,6 @@ pyproject.toml                  зависимости и настройки pyt
 ## Правила разработки
 
 - Не использовать фактическую линию, результат, SLA, сроки и статусы как признаки нового обращения.
-- Не отправлять изменения напрямую в `main`; сливать `feature/final-integration` через Merge Request.
+- Для совместной разработки создавать отдельные ветки и сливать их в `main` через Pull Request.
 - Не коммитить виртуальные окружения, кэши, SQLite, runtime uploads, временные Excel и браузерные артефакты.
 - Исключение для Excel — комплектный `modules/routing/data/raw/Обращения_1931.xlsx` и тестовые fixtures.
