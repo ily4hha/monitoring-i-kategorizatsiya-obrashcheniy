@@ -2,15 +2,15 @@
 
 Локальный сервис для приёма исторических обращений из Excel, проверки нового обращения, рекомендации категории и линии поддержки, поиска похожих случаев и SLA-аналитики. Проект объединяет FastAPI, интерфейс оператора, SQLite-хранилище и поставляемые ML-артефакты; сетевые обращения к внешним моделям не нужны.
 
-## Команда и вклад участников
+## Team and Contributions
 
-Имена пока указаны временно. Позже подписи `Участник 1`–`Участник 5` можно заменить на GitHub-ники участников.
+The names below are temporary placeholders. `Participant 1`–`Participant 5` can later be replaced with the team members' GitHub usernames.
 
-- **Участник 1** — категоризация обращений: подготовка признаков, обучение и оценка модели по 15 основным категориям, калибровка confidence, ручной fallback, сохранение ML-артефактов и документация метрик.
-- **Участник 2** — маршрутизация и поиск похожих обращений: модель рекомендации линии поддержки, TF-IDF-поиск похожих случаев, подготовка проверочных выборок, метрик, отчётов и интеграционных материалов.
-- **Участник 3** — подготовка данных и SLA-аналитика: очистка и нормализация 1 931 обращения, словарь данных, расчёт длительностей и просрочек, проверка качества, аномалий и многолинейных обращений.
-- **Участник 4** — приложение и интеграция: FastAPI-сервис, импорт Excel, SQLite-хранилище, API-контракты, интерфейс оператора, объединение модулей категоризации, маршрутизации и аналитики, интеграционные и frontend-тесты.
-- **Участник 5** — презентация и демонстрация: подготовка презентации, отчёта о качестве, сценария показа и видео-демонстрации готового сервиса.
+- **Participant 1** — appeal categorization: feature engineering, model training and evaluation across the 15 primary categories, confidence calibration, manual-review fallback, ML artifact packaging, and metrics documentation.
+- **Participant 2** — routing and similar-appeal search: support-line recommendation model, TF-IDF retrieval of similar cases, validation datasets, metrics, reports, and integration materials.
+- **Participant 3** — data preparation and SLA analytics: cleaning and normalizing 1,931 appeals, maintaining the data dictionary, calculating durations and overdue cases, and validating data quality, anomalies, and multi-line cases.
+- **Participant 4** — application and integration: FastAPI service, Excel import, SQLite storage, API contracts, operator interface, integration of categorization, routing, and analytics modules, plus integration and frontend tests.
+- **Participant 5** — presentation and demonstration: project presentation, quality report, demonstration script, and video walkthrough of the completed service.
 
 ## Что решает сервис
 
