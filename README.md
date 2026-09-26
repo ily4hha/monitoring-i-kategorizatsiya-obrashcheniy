@@ -1,6 +1,6 @@
-# Мониторинг и категоризация обращений
+# Appeal Monitoring and Categorization
 
-Локальный сервис для приёма исторических обращений из Excel, проверки нового обращения, рекомендации категории и линии поддержки, поиска похожих случаев и SLA-аналитики. Проект объединяет FastAPI, интерфейс оператора, SQLite-хранилище и поставляемые ML-артефакты; сетевые обращения к внешним моделям не нужны.
+A local service for importing historical appeals from Excel, analyzing new appeals, recommending a category and support line, finding similar cases, and calculating SLA analytics. The project combines FastAPI, an operator interface, SQLite storage, and bundled ML artifacts; it does not require network access to external models.
 
 ## Team and Contributions
 
@@ -12,26 +12,26 @@ The names below are temporary placeholders. `Participant 1`–`Participant 5` ca
 - **Participant 4** — application and integration: FastAPI service, Excel import, SQLite storage, API contracts, operator interface, integration of categorization, routing, and analytics modules, plus integration and frontend tests.
 - **Participant 5** — presentation and demonstration: project presentation, quality report, demonstration script, and video walkthrough of the completed service.
 
-## Что решает сервис
+## What the Service Does
 
-- загружает `.xlsx` и `.xls` до 25 МБ, выбирает самый большой непустой лист и сохраняет строки в SQLite;
-- категоризирует новое обращение по top-15 категориям обучающей выборки;
-- показывает confidence, объяснение и причину передачи на ручной разбор;
-- рекомендует линию поддержки;
-- ищет до пяти похожих обращений в активном загруженном датасете;
-- позволяет открыть найденную исходную запись по устойчивому SQLite `record_id`;
-- рассчитывает SLA, нагрузку и исторический риск с фильтрами;
-- сохраняет исходные поля Excel и добавляет нормализованные аналитические поля.
+- uploads `.xlsx` and `.xls` files up to 25 MB, selects the largest non-empty sheet, and stores its rows in SQLite;
+- categorizes a new appeal into one of the top 15 categories from the training dataset;
+- displays confidence, an explanation, and the reason for manual review;
+- recommends a support line;
+- finds up to five similar appeals in the active uploaded dataset;
+- opens the original matched record using a stable SQLite `record_id`;
+- calculates SLA, workload, and historical-risk analytics with filters;
+- preserves the original Excel fields and adds normalized analytical fields.
 
-## Требования
+## Requirements
 
-- Python 3.11 или новее;
+- Python 3.11 or newer;
 - Git;
-- macOS/Linux для приведённых ниже команд активации виртуального окружения.
+- macOS or Linux for the virtual-environment activation commands shown below.
 
-## Установка
+## Installation
 
-Одна последовательность для чистого клонирования проекта:
+Use the following commands for a clean installation:
 
 ```bash
 git clone https://github.com/ily4hha/monitoring-i-kategorizatsiya-obrashcheniy.git
@@ -42,145 +42,145 @@ python -m pip install --upgrade pip
 python -m pip install -e '.[dev]'
 ```
 
-## Запуск
+## Running the Application
 
 ```bash
 python -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
-Откройте [http://127.0.0.1:8000](http://127.0.0.1:8000) и дождитесь `Application startup complete`. Интерактивная документация API доступна на `/docs`.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) and wait for `Application startup complete`. Interactive API documentation is available at `/docs`.
 
-При запуске категоризатор читает локальные `modules/categorization/model.pkl` и `model.json`, а маршрутизация — `modules/routing/reports/routing/assistant.joblib`. Дополнительное окружение и скачивание весов не требуются. SQLite и копии загруженных файлов создаются в `data/runtime/`, который исключён из Git; после чистого клонирования история пуста.
+At startup, the categorizer loads the local `modules/categorization/model.pkl` and `model.json` files, while the routing module loads `modules/routing/reports/routing/assistant.joblib`. No additional runtime or model downloads are required. SQLite databases and uploaded-file copies are created in `data/runtime/`, which is excluded from Git; a clean clone starts with an empty history.
 
-## Пользовательский сценарий
+## User Flow
 
-1. На вкладке «История и аналитика» нажмите «Загрузить Excel» и выберите комплектный `modules/routing/data/raw/Обращения_1931.xlsx` с 1 931 строкой.
-2. Дождитесь импорта. Сервис сохранит исходные строки, обогатит их аналитическими полями и построит индекс похожих обращений по активному листу.
-3. Проверьте историю: используйте поиск, откройте строку и просмотрите все поля исходной записи.
-4. Проверьте аналитику и фильтры по периоду, услуге, категории, приоритету и линии.
-5. На вкладке «Новое обращение» заполните обязательные тему и описание; услуга, компонент и приоритет необязательны.
-6. Проверьте категорию, confidence и объяснение, рекомендуемую линию, похожие случаи и общий признак ручной проверки.
-7. Откройте похожий случай: его `record_id` ведёт к `GET /api/records/{record_id}` и той же исходной записи в интерфейсе.
+1. Open the **History and Analytics** tab, click **Upload Excel**, and select the bundled `modules/routing/data/raw/Обращения_1931.xlsx` file containing 1,931 rows.
+2. Wait for the import to finish. The service stores the original rows, enriches them with analytical fields, and builds a similar-appeal index for the active sheet.
+3. Review the history: use search, open a row, and inspect all fields from the original record.
+4. Review analytics and apply filters by period, service, category, priority, and support line.
+5. Open the **New Appeal** tab and enter the required subject and description; service, component, and priority are optional.
+6. Review the category, confidence, explanation, recommended support line, similar cases, and overall manual-review flag.
+7. Open a similar case: its `record_id` links to `GET /api/records/{record_id}` and to the same source record in the interface.
 
-`Обращения_1931.xlsx` содержит полную демонстрационную историю. Нормализованные поля для аналитики вычисляются при импорте; отдельный подготовленный CSV в runtime не используется.
+`Обращения_1931.xlsx` contains the complete demonstration history. Normalized analytical fields are calculated during import; the application does not use a separate prepared CSV at runtime.
 
-## Категоризация, confidence и ручной fallback
+## Categorization, Confidence, and Manual Fallback
 
-Категоризатор использует описание, услугу и компонент. Признаки — TF-IDF по словам и символьным n-граммам; классификатор — `LinearSVC` с sigmoid-калибровкой. Модель обучена на 15 наиболее частых категориях, а остальные метки объединены в служебный класс ручного разбора.
+The categorizer uses the description, service, and component. Its features are word- and character-level TF-IDF n-grams, and its classifier is a sigmoid-calibrated `LinearSVC`. The model is trained on the 15 most frequent categories; all remaining labels are grouped into a manual-review class.
 
-`category.confidence` — максимальная калиброванная оценка кандидата в диапазоне 0–1, а не гарантия правильности. Объяснение содержит кандидата, порог 0,70 и до пяти слов с положительным вкладом в линейную оценку. Автоматическая категория возвращается только при достаточном количестве известных слов, confidence не ниже порога и конкретной категории из top-15.
+`category.confidence` is the highest calibrated candidate score in the 0–1 range, not a guarantee of correctness. The explanation includes the candidate, the 0.70 threshold, and up to five words with a positive contribution to the linear score. An automatic category is returned only when the input contains enough known words, confidence meets the threshold, and the candidate is a specific top-15 category.
 
-`category=null`, `needs_manual_review=true` и текстовая причина возвращаются, если:
+The service returns `category=null`, `needs_manual_review=true`, and a textual reason when:
 
-- модель или её метаданные отсутствуют, повреждены либо несовместимы;
-- в запросе меньше двух известных содержательных слов;
-- confidence ниже 0,70;
-- кандидат относится к меткам вне top-15;
-- кандидат — слишком общий класс «Прочее»;
-- inference завершился ошибкой.
+- the model or its metadata is missing, damaged, or incompatible;
+- the request contains fewer than two known meaningful words;
+- confidence is below 0.70;
+- the candidate belongs to a label outside the top 15;
+- the candidate is the overly broad `Other` class;
+- inference fails.
 
-Общий `manual_review_required` также учитывает отсутствие/низкую уверенность маршрута. Это fail-closed поведение: сервис не выдаёт сомнительный результат как готовое автоматическое решение.
+The overall `manual_review_required` flag also accounts for a missing or low-confidence routing result. This is fail-closed behavior: the service does not present an uncertain result as a completed automatic decision.
 
-## Маршрутизация и похожие обращения
+## Routing and Similar Appeals
 
-Маршрутизация использует тему и описание и возвращает `routing.support_line`, confidence, объяснение и признак ручной проверки. Confidence маршрута — внутренняя некалиброванная оценка модели; воспринимать её как вероятность нельзя.
+Routing uses the subject and description and returns `routing.support_line`, confidence, an explanation, and a manual-review flag. Routing confidence is an internal, uncalibrated model score and must not be interpreted as a probability.
 
-Поиск похожих обращений независим от артефакта маршрутизации. После загрузки или активации Excel сервис строит TF-IDF-индекс по тексту, услуге и компоненту активного датасета. `similar_appeals[].score` — косинусное текстовое сходство, а не вероятность правильного решения. Результат содержит SQLite `record_id`, номер обращения, категорию, линию, результат работ и совпавшие термины. Пустой датасет, пустой текст или отсутствие общих терминов дают пустой список.
+Similar-appeal search is independent of the routing artifact. After an Excel file is uploaded or activated, the service builds a TF-IDF index from the text, service, and component fields of the active dataset. `similar_appeals[].score` is cosine text similarity, not the probability of a correct solution. Each result includes a SQLite `record_id`, appeal number, category, support line, resolution, and matched terms. An empty dataset, empty input text, or the absence of shared terms produces an empty result list.
 
-`GET /api/integrations` показывает независимые статусы `classification`, `routing`, `similarity` и `analytics`: `ready`, `pending` либо явную причину недоступности. Ошибка маршрутизации не отключает поиск по активному датасету.
+`GET /api/integrations` reports independent states for `classification`, `routing`, `similarity`, and `analytics`: `ready`, `pending`, or an explicit reason for unavailability. A routing failure does not disable search over the active dataset.
 
-## SLA и исторический риск
+## SLA and Historical Risk
 
-При импорте демонстрационного Excel длительность SLA переводится из `H:MM[:SS]` в часы. Если исходная фактическая длительность отсутствует, она восстанавливается как сумма времени реакции и работы по линиям 1–4; если данных нет, метрика остаётся `null`. Просрочка берётся из исходного поля `Просрочен?*`: `overdue_share = overdue_count / число строк с распознанным признаком просрочки`.
+During import of the demonstration Excel file, SLA durations are converted from `H:MM[:SS]` to hours. If the original actual duration is missing, it is reconstructed as the sum of response and work time across support lines 1–4; if those values are unavailable, the metric remains `null`. The overdue flag is read from the original `Просрочен?*` field: `overdue_share = overdue_count / number of rows with a recognized overdue value`.
 
-Сводка содержит число обращений, число и долю просроченных, среднее и медиану SLA, многолинейные случаи, обращения с двумя и более уточнениями, распределения и срезы по услуге, категории, приоритету и линии. Для неполной пользовательской схемы доступные показатели всё равно рассчитываются, а отсутствующие колонки перечисляются в `missing_columns`.
+The overview includes the appeal count, overdue count and share, average and median SLA, multi-line cases, cases with two or more clarifications, distributions, and breakdowns by service, category, priority, and line. For an incomplete user-provided schema, all available metrics are still calculated and missing columns are listed in `missing_columns`.
 
-Исторический риск не является прогнозом. Для каждой категории и линии сервис сравнивает историческую долю просрочек с общей долей в текущей отфильтрованной выборке:
+Historical risk is not a forecast. For each category and line, the service compares its historical overdue share with the overall share in the current filtered dataset:
 
-- `overdue_share_delta` — разность долей;
-- `overdue_risk_ratio` — отношение доли группы к общей доле;
-- `elevated` — доля группы выше общей при достаточной выборке;
-- группы менее чем с 20 наблюдениями получают `insufficient-sample`.
+- `overdue_share_delta` — difference between the shares;
+- `overdue_risk_ratio` — ratio of the group share to the overall share;
+- `elevated` — the group share is above the overall share and the sample is large enough;
+- groups with fewer than 20 observations receive `insufficient-sample`.
 
-Фильтры `date_from`, `date_to`, `service`, `category`, `priority`, `line` доступны в интерфейсе и как query-параметры `GET /api/analytics/overview`. Границы календарных дат включительны.
+The `date_from`, `date_to`, `service`, `category`, `priority`, and `line` filters are available in the interface and as query parameters for `GET /api/analytics/overview`. Calendar-date boundaries are inclusive.
 
-## Актуальные метрики моделей
+## Current Model Metrics
 
-Метрики категоризации из `modules/categorization/model.json`, holdout 361 обращение:
+Categorization metrics from `modules/categorization/model.json`, based on a holdout set of 361 appeals:
 
-- accuracy — 0,5485;
-- macro-F1 — 0,4587;
-- при пороге 0,70 автоматический ответ получен для 50 обращений: coverage 13,85%, 40 ответов верны, accepted accuracy 80%;
-- 79 из 79 holdout-примеров вне top-15 переданы на ручной разбор.
+- accuracy — 0.5485;
+- macro-F1 — 0.4587;
+- at the 0.70 threshold, 50 appeals received an automatic answer: 13.85% coverage, 40 correct answers, and 80% accepted accuracy;
+- all 79 holdout examples outside the top 15 were sent for manual review.
 
-Метрики маршрутизации из `modules/routing/reports/routing/metrics.json`, test 271 обращение:
+Routing metrics from `modules/routing/reports/routing/metrics.json`, based on a test set of 271 appeals:
 
-- accuracy — 0,6937;
-- macro-F1 по поддержанным линиям — 0,4288;
-- при пороге 0,85 automatic coverage — 34,32%, accepted accuracy — 81,72%;
-- majority baseline accuracy — 0,6273.
+- accuracy — 0.6937;
+- macro-F1 across supported lines — 0.4288;
+- at the 0.85 threshold, automatic coverage was 34.32% and accepted accuracy was 81.72%;
+- majority-baseline accuracy — 0.6273.
 
-Метрики отражают фиксированные holdout/test-разбиения и не гарантируют качество на новых данных. Для поиска похожих обращений активного датасета отдельная подтверждённая пользовательская метрика не заявляется.
+These metrics describe fixed holdout/test splits and do not guarantee performance on new data. No separate validated user-facing metric is claimed for similar-appeal search over the active dataset.
 
 ## API
 
-- `POST /api/datasets` — загрузить Excel;
-- `GET /api/datasets/current` — получить активный датасет;
-- `GET /api/datasets/{dataset_id}/records` — получить страницу строк;
-- `GET /api/records/{record_id}` — открыть исходную запись;
-- `POST /api/appeals/analyze` — проверить новое обращение;
-- `GET /api/analytics/overview` — получить аналитику с фильтрами;
-- `GET /api/integrations` — проверить готовность модулей;
-- `GET /api/health` — проверить доступность приложения.
+- `POST /api/datasets` — upload an Excel file;
+- `GET /api/datasets/current` — retrieve the active dataset;
+- `GET /api/datasets/{dataset_id}/records` — retrieve a page of records;
+- `GET /api/records/{record_id}` — open a source record;
+- `POST /api/appeals/analyze` — analyze a new appeal;
+- `GET /api/analytics/overview` — retrieve filtered analytics;
+- `GET /api/integrations` — check module readiness;
+- `GET /api/health` — check application health.
 
-Контракты `AppealAnalysis` и `AnalyticsOverview` опубликованы в `/openapi.json` и описаны в [docs/api-contracts.md](docs/api-contracts.md). Их JSON-примеры находятся в `docs/contracts/`.
+The `AppealAnalysis` and `AnalyticsOverview` contracts are published in `/openapi.json` and documented in [docs/api-contracts.md](docs/api-contracts.md). JSON examples are available in `docs/contracts/`.
 
-## Ограничения
+## Limitations
 
-- качество категоризации и маршрутизации ограничено обучающими данными; ручной fallback является частью штатного сценария;
-- категория строится только по описанию, услуге и компоненту, маршрут — по теме и описанию;
-- confidence категоризации и маршрутизации, а также score похожести имеют разный смысл и не взаимозаменяемы;
-- похожие случаи доступны только после загрузки активного датасета и ранжируются по лексическому TF-IDF-сходству;
-- данные и история локальны для текущего runtime и не синхронизируются между экземплярами приложения;
-- принимаются только `.xlsx` и `.xls` до 25 МБ; проверяются размер, расширение, сигнатура, ZIP-структура XLSX, размеры листов и служебные/повторяющиеся заголовки;
-- pickle/joblib-файлы считаются доверенными артефактами репозитория; HTTP-запрос не может выбрать путь к модели;
-- запуск с `--lifespan off` не инициализирует модели.
+- categorization and routing quality is limited by the training data; manual fallback is part of the normal workflow;
+- categorization uses only the description, service, and component, while routing uses only the subject and description;
+- categorization confidence, routing confidence, and similarity score have different meanings and are not interchangeable;
+- similar cases are available only after an active dataset is uploaded and are ranked by lexical TF-IDF similarity;
+- data and history are local to the current runtime and are not synchronized between application instances;
+- only `.xlsx` and `.xls` files up to 25 MB are accepted; the service validates size, extension, signature, XLSX ZIP structure, sheet dimensions, and technical or duplicate headers;
+- pickle/joblib files are treated as trusted repository artifacts; an HTTP request cannot select a model path;
+- running with `--lifespan off` does not initialize the models.
 
-## Тесты
+## Tests
 
 ```bash
 python -m pytest
 ```
 
-## Структура проекта
+## Project Structure
 
 ```text
 app/
-  main.py                       FastAPI, lifespan и HTTP-маршруты
-  models.py                     Pydantic-контракты API
+  main.py                       FastAPI, lifespan, and HTTP routes
+  models.py                     Pydantic API contracts
   services/
-    dataset_store.py            импорт Excel, SQLite и исходные записи
-    preprocessing.py            обогащение исторического Excel
-    analytics.py                SLA, фильтры и исторический риск
-    categorization.py           адаптер категоризатора и fallback
-    integrations.py             объединение результатов модулей
-    routing.py                  маршрутизация и поиск похожих случаев
-  static/                       интерфейс оператора
+    dataset_store.py            Excel import, SQLite, and source records
+    preprocessing.py            historical Excel enrichment
+    analytics.py                SLA, filters, and historical risk
+    categorization.py           categorizer adapter and fallback
+    integrations.py             combined module results
+    routing.py                  routing and similar-appeal search
+  static/                       operator interface
 data/
-  runtime/                      локальные БД и uploads, исключены из Git
+  runtime/                      local databases and uploads, excluded from Git
 docs/
-  api-contracts.md              описание контрактов API
-  contracts/                    эталонные JSON-ответы
+  api-contracts.md              API contract documentation
+  contracts/                    reference JSON responses
 modules/
-  categorization/               код, model.pkl, model.json и отчёт
-  routing/                      код, assistant.joblib, метрики и demo Excel
-tests/                          API, frontend, импорт, безопасность и интеграции
-pyproject.toml                  зависимости и настройки pytest
+  categorization/               code, model.pkl, model.json, and report
+  routing/                      code, assistant.joblib, metrics, and demo Excel
+tests/                          API, frontend, import, security, and integration tests
+pyproject.toml                  dependencies and pytest configuration
 ```
 
-## Правила разработки
+## Development Guidelines
 
-- Не использовать фактическую линию, результат, SLA, сроки и статусы как признаки нового обращения.
-- Для совместной разработки создавать отдельные ветки и сливать их в `main` через Pull Request.
-- Не коммитить виртуальные окружения, кэши, SQLite, runtime uploads, временные Excel и браузерные артефакты.
-- Исключение для Excel — комплектный `modules/routing/data/raw/Обращения_1931.xlsx` и тестовые fixtures.
+- Do not use the actual support line, resolution, SLA, deadlines, or statuses as features for a new appeal.
+- For collaborative development, create separate branches and merge them into `main` through Pull Requests.
+- Do not commit virtual environments, caches, SQLite databases, runtime uploads, temporary Excel files, or browser artifacts.
+- The bundled `modules/routing/data/raw/Обращения_1931.xlsx` file and test fixtures are the only Excel exceptions.
